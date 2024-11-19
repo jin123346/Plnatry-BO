@@ -1,0 +1,36 @@
+spring:
+    application:
+        name: back-end
+    data:
+        redis:
+            host: 13.124.94.213
+            port: 6379
+        mongodb:
+            uri: mongodb://gyubux:Alcls154*@13.124.94.213:27017/gyubux?authSource=admin
+    datasource:
+        driver-class-name: com.mysql.cj.jdbc.Driver
+        password: Alcls154*
+        url: jdbc:mysql://13.124.94.213:3306/gyubux?useSSL=false&allowPublicKeyRetrieval=true
+        username: gyubux
+    devtools:
+        livereload:
+            enabled: true
+    jpa:
+        database: mysql
+        hibernate:
+            ddl-auto: update
+            naming:
+                physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+        properties:
+            hibernate:
+                dialect: org.hibernate.dialect.MySQL8Dialect
+                format_sql: true
+                use_sql_comments: true
+        show-sql: true
+
+token:
+    secret:
+        key: "vQ9q7lwzGS2M+cjRz+Q5N2Cv3+6s49R7TmQ0gkzHpY2UM5kAzwp4Aaz+q5lX3p0ykAzE7HgFmbFMcmU5CwmfKQ=="
+
+
+
