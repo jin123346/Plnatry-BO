@@ -14,11 +14,15 @@ public class JwtTokenProvider {
     @Value("${token.secret.key}")
     private String secret;
 
+    @Value("${token.secret.issuer}")
+    private String issuer;
+
     public String createToken(String username) {
         Date now = new Date();
         Date validity = new Date(now.getTime() + 3600000); // 1시간 유효
 
         return Jwts.builder()
+                .setIssuer(issuer)
                 .setSubject(username)
                 .setIssuedAt(now)
                 .setExpiration(validity)
