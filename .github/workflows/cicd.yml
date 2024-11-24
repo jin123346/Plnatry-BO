@@ -1,4 +1,5 @@
 name: Java CI with Gradle
+
 on:
   push:
     branches:
@@ -46,20 +47,20 @@ jobs:
           name: app
           path: build/libs/
 
-      - name: Setup SSH Key
+      - name: Setup SSH Key for Server 1
         run: |
           echo "${{ secrets.AWS_EC2_KEY }}" > private_key.pem
           chmod 600 private_key.pem
 
-      - name: Copy JAR to EC2
+      - name: Copy JAR to EC2 Server 1
         run: |
           JAR_FILE=$(ls build/libs/*.jar | head -n 1)
           scp -i private_key.pem \
             -o StrictHostKeyChecking=no \
             $JAR_FILE \
             ${{ secrets.AWS_EC2_USER }}@${{ secrets.AWS_EC2_HOST }}:/home/${{ secrets.AWS_EC2_USER }}/
-      
-      - name: Restart Spring Application on EC2
+
+      - name: Restart Spring Application on EC2 Server 1
         run: |
           JAR_FILE=$(basename $(ls build/libs/*.jar | head -n 1))
           ssh -i private_key.pem \
@@ -69,5 +70,29 @@ jobs:
             nohup java -jar /home/${{ secrets.AWS_EC2_USER }}/$JAR_FILE > app.log 2>&1 &
           EOF
 
+      - name: Setup SSH Key for Server 2
+        run: |
+          echo "${{ secrets.AWS_EC2_KEY2 }}" > private_key2.pem
+          chmod 600 private_key2.pem
+
+      - name: Copy JAR to EC2 Server 2
+        run: |
+          JAR_FILE=$(ls build/libs/*.jar | head -n 1)
+          scp -i private_key2.pem \
+            -o StrictHostKeyChecking=no \
+            $JAR_FILE \
+            ${{ secrets.AWS_EC2_USER2 }}@${{ secrets.AWS_EC2_HOST2 }}:/home/${{ secrets.AWS_EC2_USER2 }}/
+
+      - name: Restart Spring Application on EC2 Server 2
+        run: |
+          JAR_FILE=$(basename $(ls build/libs/*.jar | head -n 1))
+          ssh -i private_key2.pem \
+            -o StrictHostKeyChecking=no \
+            ${{ secrets.AWS_EC2_USER2 }}@${{ secrets.AWS_EC2_HOST2 }} << EOF
+            pgrep java | xargs kill -9;
+            nohup java -jar /home/${{ secrets.AWS_EC2_USER2 }}/$JAR_FILE > app.log 2>&1 &
+          EOF
+
       - name: Cleanup
-        run: rm -f private_key.pem
+        run: |
+          rm -f private_key.pem private_key2.pem
