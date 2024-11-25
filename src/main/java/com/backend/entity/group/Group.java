@@ -7,8 +7,6 @@ import lombok.*;
 import java.util.List;
 
 @Entity
-@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
-@DiscriminatorColumn(name = "group_type", discriminatorType = DiscriminatorType.STRING)
 @AllArgsConstructor
 @NoArgsConstructor
 @ToString
@@ -24,6 +22,13 @@ public class Group {
     @Column(name = "group_name")
     private String name;  // 그룹 이름
 
-    @OneToMany(mappedBy = "group", fetch = FetchType.LAZY)  // User와의 관계
-    private List<User> users; // 그룹에 속한 사용자들
+    @OneToMany(mappedBy = "group")
+    private List<GroupMapper> groupMappers;
+
+    @Column(name = "group_status")
+    private int status;  // 부서 관련 상태
+
+
+    @OneToOne(mappedBy = "group")
+    private GroupLeader groupLeader;
 }
