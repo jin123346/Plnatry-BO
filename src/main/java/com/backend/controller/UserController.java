@@ -1,15 +1,17 @@
 package com.backend.controller;
 
 import com.backend.dto.request.LoginDto;
-import com.backend.entity.User;
+import com.backend.entity.user.User;
 import com.backend.repository.UserRepository;
 import com.backend.util.JwtTokenProvider;
-import io.jsonwebtoken.Jwts;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 @RestController
@@ -32,9 +34,11 @@ public class UserController {
         }
 
         if(passwordEncoder.matches(dto.getPwd(), user.get().getPwd())){
-            String jwts = tokenProvider.createToken(dto.getUid());
-            System.out.println(jwts);
-            return ResponseEntity.ok().body(jwts);
+            String jwts = tokenProvider.createToken(dto.getUid(),user.get().getRole().toString());
+            Map<String, Object> response = new HashMap<>();
+            response.put("token",jwts);
+            response.put("role",user.get().getRole());
+            return ResponseEntity.ok().body(response);
         }
 
         return ResponseEntity.ok().build();
