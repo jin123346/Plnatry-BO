@@ -10,15 +10,15 @@ import lombok.*;
 @Getter
 @ToString
 @Entity
-@Table(name = "department_leader")
-public class DepartmentLeader {
+@Table(name = "group_leader")
+public class GroupLeader {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "department_leader_id")
+    @Column(name = "group_leader_id")
     private Long id;
 
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "department_id")
-    private Department department;
+    @JoinColumn(name = "group_id")
+    private Group group;
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")

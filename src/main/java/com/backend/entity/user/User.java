@@ -1,8 +1,8 @@
 package com.backend.entity.user;
 
-import com.backend.entity.group.DepartmentLeader;
+import com.backend.dto.response.GetAdminUsersRespDto;
 import com.backend.entity.group.Group;
-import com.backend.entity.group.TeamLeader;
+import com.backend.entity.group.GroupMapper;
 import com.backend.util.Role;
 import jakarta.persistence.*;
 import lombok.*;
@@ -10,6 +10,7 @@ import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Getter
@@ -57,10 +58,6 @@ public class User {
     @Column(name = "company")
     private String company;
 
-    @ManyToOne(fetch = FetchType.LAZY) // Group과 ManyToOne 관계 설정
-    @JoinColumn(name = "group_id") // 외래 키 컬럼 설정
-    private Group group;
-
     @Column(name = "payment_token")
     private String paymentToken; // 결제정보
 
@@ -69,6 +66,9 @@ public class User {
 
     @Column(name = "refresh_token")
     private String refreshToken;
+
+    @OneToMany(mappedBy = "user")
+    private List<GroupMapper> groupMappers;
 
     @Column(name = "create_at")
     @CreationTimestamp
@@ -80,4 +80,20 @@ public class User {
     @Column(name = "join_date")
     private LocalDate joinDate;
 
+    @OneToOne(fetch = FetchType.LAZY, mappedBy = "user")
+    private ProfileImg profileImg;
+
+
+
+    public GetAdminUsersRespDto toGetAdminUsersRespDto() {
+        return GetAdminUsersRespDto.builder()
+                .email(email)
+                .uid(uid)
+                .id(id)
+                .build();
+    }
+
+    public void updateRole(Role role) {
+        this.role = role;
+    }
 }

@@ -4,23 +4,24 @@ import com.backend.entity.user.User;
 import jakarta.persistence.*;
 import lombok.*;
 
-@Entity
 @AllArgsConstructor
 @NoArgsConstructor
 @ToString
 @Getter
 @Builder
-@Table(name = "team_leader")
-public class TeamLeader {
+@Entity
+@Table(name = "group_mapper")
+public class GroupMapper {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "team_leader_id")
+    @Column(name = "group_mapper_id")
     private Long id;
 
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "team_id")
-    private Team team;
+    @ManyToOne
+    @JoinColumn(name = "group_id")
+    private Group group;  // 그룹
 
-    @OneToOne(fetch = FetchType.LAZY)
+    @ManyToOne
     @JoinColumn(name = "user_id")
-    private User user;
+    private User user;  // 사용자
+
 }
