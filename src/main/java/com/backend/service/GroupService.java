@@ -2,6 +2,7 @@ package com.backend.service;
 
 import com.backend.dto.request.PostDepartmentReqDto;
 import com.backend.dto.response.GetAdminSidebarGroupsRespDto;
+import com.backend.dto.response.GetAdminUsersDtailRespDto;
 import com.backend.dto.response.GetAdminUsersRespDto;
 import com.backend.entity.group.GroupLeader;
 import com.backend.entity.group.Group;
@@ -180,4 +181,78 @@ public class GroupService {
         return ResponseEntity.ok("변경완료했습니다.");
     }
 
+    public ResponseEntity<?> getGroupMembers(String team) {
+        List<GroupMapper> groupMappers = groupMapperRepository.findAllByGroup_Name(team);
+        if(groupMappers.isEmpty()){
+            return ResponseEntity.badRequest().body("소속 인원이 존재하지 않습니다.");
+        }
+        List<GetAdminUsersRespDto> dtos = groupMappers.stream().map(GroupMapper::toGetAdminUsersRespDto).toList();
+
+        return ResponseEntity.ok(dtos);
+    }
+
+    public ResponseEntity<?> patchGroupMembers(List<Long> ids, String team) {
+        List<Role> excludedRoles = Arrays.asList(Role.TEAM, Role.DEPARTMENT);
+        List<GroupMapper> groupMappers = groupMapperRepository.findAllByGroup_NameAndUser_RoleNotIn(team, excludedRoles);
+        groupMapperRepository.deleteAll(groupMappers);
+        Group group = groupMappers.get(0).getGroup();
+        List<GroupMapper> newGroupMappers = new ArrayList<>();
+        ids.forEach(v->{
+            Optional<User> user = userRepository.findById(v);
+            GroupMapper groupMapper = GroupMapper.builder()
+                    .group(group)
+                    .user(user.get())
+                    .build();
+            newGroupMappers.add(groupMapper);
+        });
+        groupMapperRepository.saveAll(newGroupMappers);
+
+        return ResponseEntity.ok().body("구성원이 변경되었습니다.");
+    }
+
+    public ResponseEntity<?> patchGroupName(String name, String update) {
+        Optional<Group> group = groupRepository.findByName(name);
+        if(group.isEmpty()){
+            return ResponseEntity.badRequest().body("그룹이 없습니다.");
+        }
+        group.get().patchGroupName(update);
+        if(group.get().getType()==0){
+            return ResponseEntity.ok().body("부서명이 "+update+"로 변경되었습니다.");
+        } else {
+            return ResponseEntity.ok().body("팀명이 "+update+"로 변경되었습니다.");
+        }
+
+    }
+
+    public ResponseEntity<?> getGroupMembersDetail(String team) {
+        List<User> users = new ArrayList<>();
+        Optional<Group> group = groupRepository.findByName(team);
+        if(group.isEmpty()){
+            return ResponseEntity.badRequest().body("해당 그룹이 존재하지 않습니다.");
+        }
+        List<GroupMapper> groupMappers = groupMapperRepository.findAllByGroup_Name(team);
+        if(groupMappers.isEmpty()){
+            if(group.get().getType()==0){
+                return ResponseEntity.badRequest().body("해당 부서에 소속인원이 없습니다.");
+            } else {
+                return ResponseEntity.badRequest().body("해당 팀에 소속인원이 없습니다.");
+            }
+        }
+        User leader = group.get().getGroupLeader().getUser();
+        if(leader == null){
+            if(group.get().getType()==0){
+                return ResponseEntity.badRequest().body("해당 부서에 부서장이 없습니다.");
+            } else {
+                return ResponseEntity.badRequest().body("해당 팀에 팀장이 없습니다.");
+            }
+        }
+        users.add(leader);
+        groupMappers.forEach(v->{
+            User user=v.getUser();
+            users.add(user);
+        });
+
+        List<GetAdminUsersDtailRespDto> dtos = users.stream().map(User::toGetAdminUsersDtailRespDto).toList();
+        return ResponseEntity.ok(dtos);
+    }
 }

@@ -18,6 +18,7 @@ public class GroupLeader {
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "group_id")
+    @ToString.Exclude
     private Group group;
 
     @OneToOne(fetch = FetchType.LAZY)

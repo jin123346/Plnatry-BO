@@ -1,5 +1,6 @@
 package com.backend.entity.user;
 
+import com.backend.dto.response.GetAdminUsersDtailRespDto;
 import com.backend.dto.response.GetAdminUsersRespDto;
 import com.backend.entity.group.Group;
 import com.backend.entity.group.GroupMapper;
@@ -10,6 +11,7 @@ import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @Entity
@@ -49,6 +51,9 @@ public class User {
     @Column(name = "hp")
     private String hp;
 
+    @Column(name = "name")
+    private String name;
+
     @Column(name = "city")
     private String city; 
 
@@ -71,6 +76,7 @@ public class User {
     private String refreshToken;
 
     @OneToMany(mappedBy = "user")
+    @ToString.Exclude
     private List<GroupMapper> groupMappers;
 
     @Column(name = "create_at")
@@ -92,6 +98,19 @@ public class User {
         return GetAdminUsersRespDto.builder()
                 .email(email)
                 .uid(uid)
+                .id(id)
+                .build();
+    }
+
+    public GetAdminUsersDtailRespDto toGetAdminUsersDtailRespDto() {
+
+        return GetAdminUsersDtailRespDto.builder()
+                .email(email)
+                .level(level)
+                .attendance(0)
+                .createAt("아직 안뽑")
+                .status(status)
+                .name(name)
                 .id(id)
                 .build();
     }

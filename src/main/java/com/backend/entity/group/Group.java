@@ -24,6 +24,7 @@ public class Group {
     private String name;  // 그룹 이름
 
     @OneToMany(mappedBy = "group")
+    @ToString.Exclude
     private List<GroupMapper> groupMappers;
 
     @Column(name = "group_status")
@@ -43,5 +44,9 @@ public class Group {
                 .id(id)
                 .name(name)
                 .build();
+    }
+
+    public void patchGroupName(String update) {
+        this.name = update;
     }
 }

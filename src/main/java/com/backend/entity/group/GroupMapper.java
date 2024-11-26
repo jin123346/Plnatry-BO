@@ -1,5 +1,6 @@
 package com.backend.entity.group;
 
+import com.backend.dto.response.GetAdminUsersRespDto;
 import com.backend.entity.user.User;
 import jakarta.persistence.*;
 import lombok.*;
@@ -24,4 +25,11 @@ public class GroupMapper {
     @JoinColumn(name = "user_id")
     private User user;  // 사용자
 
+    public GetAdminUsersRespDto toGetAdminUsersRespDto() {
+        return GetAdminUsersRespDto.builder()
+                .email(user.getEmail())
+                .id(user.getId())
+                .uid(user.getUid())
+                .build();
+    }
 }
