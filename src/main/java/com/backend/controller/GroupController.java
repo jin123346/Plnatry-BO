@@ -7,6 +7,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
@@ -58,4 +60,38 @@ public class GroupController {
         return response;
     }
 
+    @GetMapping("/group/users")
+    public ResponseEntity<?> getUsers(
+            @RequestParam(value = "team",defaultValue = "") String team
+    ){
+        ResponseEntity<?> response = groupService.getGroupMembers(team);
+        return response;
+    }
+
+    @GetMapping("/group/users/detail")
+    public ResponseEntity<?> getUsersDtail(
+            @RequestParam(value = "team",defaultValue = "") String team
+    ){
+        ResponseEntity<?> response = groupService.getGroupMembersDetail(team);
+        return response;
+    }
+
+    @PatchMapping("/group/users")
+    public ResponseEntity<?> patchUsers(
+            @RequestParam List<Long> ids,
+            @RequestParam String team
+            ){
+        System.out.println(ids);
+        ResponseEntity<?> response = groupService.patchGroupMembers(ids,team);
+        return response;
+    }
+
+    @PatchMapping("/group")
+    public ResponseEntity<?> patchGroup(
+            @RequestParam String name,
+            @RequestParam String update
+    ){
+        ResponseEntity<?> response = groupService.patchGroupName(name,update);
+        return response;
+    }
 }
