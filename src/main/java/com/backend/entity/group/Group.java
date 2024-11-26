@@ -1,5 +1,6 @@
 package com.backend.entity.group;
 
+import com.backend.dto.response.GetAdminSidebarGroupsRespDto;
 import com.backend.entity.user.User;
 import jakarta.persistence.*;
 import lombok.*;
@@ -28,7 +29,19 @@ public class Group {
     @Column(name = "group_status")
     private int status;  // 부서 관련 상태
 
+    @Column(name = "group_type")
+    private Integer type;
 
     @OneToOne(mappedBy = "group")
     private GroupLeader groupLeader;
+
+    @Column(name = "company")
+    private String company;
+
+    public GetAdminSidebarGroupsRespDto toGetAdminSidebarGroupsRespDto() {
+        return GetAdminSidebarGroupsRespDto.builder()
+                .id(id)
+                .name(name)
+                .build();
+    }
 }
