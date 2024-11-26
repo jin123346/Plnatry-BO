@@ -37,6 +37,9 @@ public class User {
     @Enumerated(EnumType.STRING)
     private Role role; // 역할
 
+    @Column(name = "level")
+    private Integer level;
+
     @Column(name = "grade")
     private Integer grade; // 결제등급 enum 변경
 
