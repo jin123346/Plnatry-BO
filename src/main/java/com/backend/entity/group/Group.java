@@ -1,7 +1,6 @@
 package com.backend.entity.group;
 
 import com.backend.dto.response.GetAdminSidebarGroupsRespDto;
-import com.backend.entity.user.User;
 import jakarta.persistence.*;
 import lombok.*;
 
