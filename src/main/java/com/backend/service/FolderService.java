@@ -1,6 +1,11 @@
 package com.backend.service;
 
 
+import com.backend.dto.request.drive.NewDriveRequest;
+import com.backend.dto.response.FolderDto;
+import com.backend.entity.folder.Folder;
+import com.backend.entity.user.User;
+import com.backend.repository.FolderRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Value;
@@ -11,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.File;
+import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -18,6 +24,9 @@ import java.io.File;
 public class FolderService {
 
     private static final String BASE_UPLOAD_DIR = "/data/uploads/";
+    private final SftpService sftpService;
+    private final UserService userService;
+    private final FolderRepository folderRepository;
     private String fileServerUrl = "http://43.202.45.49:90/local/upload/create-folder";
 
 
@@ -60,6 +69,39 @@ public class FolderService {
         } else {
             System.err.println("폴더 생성 실패: " + response.getStatusCode());
         }
+    }
+
+
+    public void createDrive(NewDriveRequest request){
+
+
+        String uid = request.getOwner();
+//        boolean mkdir = sftpService.createUserFolderOnSftp(uid);
+        boolean makeDrive =  sftpService.createFolder(request.getName(),uid);
+
+        log.info("결과!!!!"+makeDrive);
+
+        if(makeDrive){
+            User user = User.builder()
+                    .uid(uid)
+                    .build();
+           Folder folder =  Folder.builder()
+                   .name(request.getName())
+                   .order(0)
+                   .parent(null)
+                   .owner(user)
+                   .description(request.getDescription())
+                   .status(0)
+                   .isShared(request.getIsShared())
+                   .linkSharing(request.getLinkSharing())
+                   .updatedAt(LocalDateTime.now())
+                   .build();
+
+           Folder savedFolder =  folderRepository.save(folder);
+        }
+
+
+
     }
 
 

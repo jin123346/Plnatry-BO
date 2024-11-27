@@ -40,18 +40,6 @@ public class SftpService {
             // SFTP 서버에 폴더 생성
             channelSftp.mkdir(remoteDir);
 
-            // chmod 실행 (JSch Exec 명령 사용)
-            String command = String.format("chmod 755 %s", remoteDir);
-            ChannelExec channelExec = (ChannelExec) session.openChannel("exec");
-            channelExec.setCommand(command);
-            channelExec.connect();
-            int exitStatus = channelExec.getExitStatus();
-            channelExec.disconnect();
-
-            if (exitStatus != 0) {
-                log.error("Failed to set permissions for folder: {}", remoteDir);
-                return false;
-            }
 
             channelSftp.disconnect();
             session.disconnect();
@@ -134,9 +122,9 @@ public class SftpService {
         System.out.println("File downloaded successfully from " + remoteDir + remoteFilePath);
     }
 
-    public boolean createFolder(String folderName) {
-        String remoteFolderPath = BASE_SFTP_DIR + folderName;
-
+    public boolean createFolder(String folderName,String username) {
+        String remoteDir = BASE_SFTP_DIR + username + "/"+ folderName;
+        log.info("remoteDIR!!! "+remoteDir);
         try {
             JSch jsch = new JSch();
             Session session = jsch.getSession(SFTP_USER, SFTP_HOST, SFTP_PORT);
@@ -144,26 +132,18 @@ public class SftpService {
             session.setConfig("StrictHostKeyChecking", "no");
             session.connect();
 
-            Channel channel = session.openChannel("exec");
-            ChannelExec channelExec = (ChannelExec) channel;
+            ChannelSftp channelSftp = (ChannelSftp) session.openChannel("sftp");
+            channelSftp.connect();
 
-            // 폴더 생성 명령
-            String command = String.format("mkdir -p %s && chown %s:%s %s", remoteFolderPath, SFTP_USER, SFTP_USER, remoteFolderPath);
-            channelExec.setCommand(command);
+            // SFTP 서버에 폴더 생성
+            channelSftp.mkdir(remoteDir);
+            log.info("Folder created successfully on SFTP: {}", remoteDir);
 
-            channelExec.connect();
-
-            int exitStatus = channelExec.getExitStatus();
-            channelExec.disconnect();
+            channelSftp.disconnect();
             session.disconnect();
 
-            if (exitStatus == 0) {
-                log.info("Folder created successfully: {}", remoteFolderPath);
-                return true;
-            } else {
-                log.error("Failed to create folder. Exit status: {}", exitStatus);
-                return false;
-            }
+            log.info("Folder created and permissions set successfully on SFTP: {}", remoteDir);
+            return true;
         } catch (Exception e) {
             log.error("Error while creating folder: {}", e.getMessage());
             return false;
