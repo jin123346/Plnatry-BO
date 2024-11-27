@@ -1,10 +1,12 @@
 package com.backend.entity.calendar;
 
+import com.backend.dto.response.calendar.GetCalendarsDto;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.DialectOverride;
 
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 
 @AllArgsConstructor
 @ToString
@@ -52,6 +54,14 @@ public class CalendarContent {
     @Column(name = "calendar_content_importance")
     private int importance; // 중요도
 
-
+    public GetCalendarsDto toGetCalendarsDto() {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        String sdate = formatter.format(calendarStartDate);
+        return GetCalendarsDto.builder()
+                .title(name)
+                .id(calendarContentId)
+                .date(sdate)
+                .build();
+    }
 
 }
