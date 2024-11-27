@@ -15,4 +15,8 @@ public interface GroupMapperRepository extends JpaRepository<GroupMapper, Long> 
     List<GroupMapper> findAllByGroup_NameAndUser_RoleNotIn(String team, List<Role> excludedRoles);
 
     List<GroupMapper> findAllByGroup_NameAndUser_Status(String team, int i);
+
+    List<GroupMapper> findAllByGroup_NameAndUser_Level(String team, int i);
+
+    List<GroupMapper> findAllByGroup_NameAndUser_LevelOrderByUser_LevelDesc(String team, int i);
 }

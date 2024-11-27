@@ -4,6 +4,7 @@ import com.backend.dto.request.PostDepartmentReqDto;
 import com.backend.dto.response.GetAdminUsersRespDto;
 import com.backend.service.GroupService;
 import lombok.RequiredArgsConstructor;
+import org.apache.coyote.Response;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -72,9 +73,17 @@ public class GroupController {
 
     @GetMapping("/group/users/detail")
     public ResponseEntity<?> getUsersDtail(
-            @RequestParam(value = "team",defaultValue = "") String team
+            @RequestParam(value = "team",defaultValue = "") String team,
+            @RequestParam(value = "condition",defaultValue = "0") String condition,
+            @RequestParam(value = "keyword",defaultValue = "0") String keyword
     ){
-        ResponseEntity<?> response = groupService.getGroupMembersDetail(team);
+        ResponseEntity<?> response;
+        if(!condition.equals("0")&&!keyword.equals("0")){
+            response = groupService.getGroupMembersDetailBySearch(team,condition,keyword);
+        } else {
+            response = groupService.getGroupMembersDetail(team);
+        }
+
         return response;
     }
 

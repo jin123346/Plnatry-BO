@@ -277,5 +277,27 @@ public class GroupService {
         List<GetAdminUsersApprovalRespDto> dtos = users.stream().map(User::toGetAdminUsersApprovalRespDto).toList();
         return ResponseEntity.ok(dtos);
     }
-    
+
+    public ResponseEntity<?> getGroupMembersDetailBySearch(String team, String condition, String keyword) {
+        List<User> users = new ArrayList<>();
+        Optional<Group> group = groupRepository.findByName(team);
+        if(group.isEmpty()){
+            return ResponseEntity.badRequest().body("해당 그룹이 존재하지 않습니다.");
+        }
+        List<GroupMapper> groupMappers = groupMapperRepository.findAllByGroup_NameAndUser_LevelOrderByUser_LevelDesc(team,Integer.parseInt(keyword));
+        if(groupMappers.isEmpty()){
+            if(group.get().getType()==0){
+                return ResponseEntity.badRequest().body("해당 부서에 검색결과가 없습니다.");
+            } else {
+                return ResponseEntity.badRequest().body("해당 팀에 검색결과가 없습니다.");
+            }
+        }
+        groupMappers.forEach(v->{
+            User user=v.getUser();
+            users.add(user);
+        });
+
+        List<GetAdminUsersDtailRespDto> dtos = users.stream().map(User::toGetAdminUsersDtailRespDto).toList();
+        return ResponseEntity.ok(dtos);
+    }
 }
