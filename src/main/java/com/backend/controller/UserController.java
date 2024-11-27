@@ -1,6 +1,7 @@
 package com.backend.controller;
 
 import com.backend.dto.request.LoginDto;
+import com.backend.dto.request.admin.user.PatchAdminUserApprovalDto;
 import com.backend.dto.response.GetAdminUsersRespDto;
 import com.backend.entity.user.User;
 import com.backend.repository.UserRepository;
@@ -50,5 +51,13 @@ public class UserController {
         List<GetAdminUsersRespDto> users = userService.getUserNotTeamLeader();
         System.out.println(users);
         return ResponseEntity.ok(users);
+    }
+
+    @PatchMapping("/admin/user/approval")
+    public ResponseEntity<?> patchUserApproval(
+            @RequestBody PatchAdminUserApprovalDto dto
+            ){
+        ResponseEntity<?> response = userService.patchUserApproval(dto);
+        return response;
     }
 }

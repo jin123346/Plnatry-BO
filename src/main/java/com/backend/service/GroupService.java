@@ -2,11 +2,13 @@ package com.backend.service;
 
 import com.backend.dto.request.PostDepartmentReqDto;
 import com.backend.dto.response.GetAdminSidebarGroupsRespDto;
+import com.backend.dto.response.GetAdminUsersApprovalRespDto;
 import com.backend.dto.response.GetAdminUsersDtailRespDto;
 import com.backend.dto.response.GetAdminUsersRespDto;
 import com.backend.entity.group.GroupLeader;
 import com.backend.entity.group.Group;
 import com.backend.entity.group.GroupMapper;
+import com.backend.entity.user.Attendance;
 import com.backend.entity.user.User;
 import com.backend.repository.GroupLeaderRepository;
 import com.backend.repository.GroupMapperRepository;
@@ -18,6 +20,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 @Service
@@ -54,6 +58,7 @@ public class GroupService {
                 .type(0)
                 .build();
         groupRepository.save(newGroup);
+
         List<GroupMapper> mappers = new ArrayList<>();
         users.forEach(v->{
             GroupMapper groupMapper = GroupMapper.builder()
@@ -170,12 +175,20 @@ public class GroupService {
                     .user(user.get())
                     .build();
             groupLeaderRepository.save(newGroupLeader);
-            user.get().updateRole(Role.TEAM);
+            if(group.get().getType()==1){
+                user.get().updateRole(Role.TEAM);
+            } else {
+                user.get().updateRole(Role.DEPARTMENT);
+            }
         } else {
             User oldLeader = leader.getUser();
             oldLeader.updateRole(Role.WORKER);
             userRepository.save(oldLeader);
-            user.get().updateRole(Role.TEAM);
+            if(group.get().getType()==1){
+                user.get().updateRole(Role.TEAM);
+            } else {
+                user.get().updateRole(Role.DEPARTMENT);
+            }
             leader.patchLeader(user.get());
         }
         return ResponseEntity.ok("변경완료했습니다.");
@@ -255,4 +268,14 @@ public class GroupService {
         List<GetAdminUsersDtailRespDto> dtos = users.stream().map(User::toGetAdminUsersDtailRespDto).toList();
         return ResponseEntity.ok(dtos);
     }
+
+    public ResponseEntity<?> getGroupMembersApproval() {
+        List<User> users = userRepository.findAllByStatus(0);
+        if(users.isEmpty()){
+            return ResponseEntity.ok("승인 요청이 없습니다.");
+        }
+        List<GetAdminUsersApprovalRespDto> dtos = users.stream().map(User::toGetAdminUsersApprovalRespDto).toList();
+        return ResponseEntity.ok(dtos);
+    }
+    
 }

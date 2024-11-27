@@ -7,7 +7,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api")
@@ -76,6 +78,12 @@ public class GroupController {
         return response;
     }
 
+    @GetMapping("/group/users/approval")
+    public ResponseEntity<?> getUsersApproval(){
+        ResponseEntity<?> response = groupService.getGroupMembersApproval();
+        return response;
+    }
+
     @PatchMapping("/group/users")
     public ResponseEntity<?> patchUsers(
             @RequestParam List<Long> ids,
@@ -94,4 +102,6 @@ public class GroupController {
         ResponseEntity<?> response = groupService.patchGroupName(name,update);
         return response;
     }
+
+
 }
