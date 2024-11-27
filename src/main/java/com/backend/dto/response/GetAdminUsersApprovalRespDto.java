@@ -8,12 +8,10 @@ import lombok.*;
 @Getter
 @Setter
 @Builder
-public class GetAdminUsersDtailRespDto {
+public class GetAdminUsersApprovalRespDto {
     private Long id;
     private String name;
     private String email;
-    private Integer status;
-    private String attendance;
-    private String level;
+    private String uid;
     private String createAt;
 }

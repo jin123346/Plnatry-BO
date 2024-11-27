@@ -22,7 +22,7 @@ public class Attendance {
     private User user;  
 
     @Column(name = "`year_month`")
-    private int yearMonth; // 몇년 몇월달
+    private String yearMonth; // 몇년 몇월달
 
     @Column(name = "work_days")
     private int workDays; // 출석일
