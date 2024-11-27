@@ -15,6 +15,11 @@ spring:
     devtools:
         livereload:
             enabled: true
+    servlet:
+          multipart:
+              location: data/upload
+              max-file-size: 10MB
+              enabled: true
     jpa:
         database: mysql
         hibernate:
