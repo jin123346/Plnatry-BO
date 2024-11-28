@@ -2,10 +2,11 @@ package com.backend.service;
 
 
 import com.backend.dto.request.drive.NewDriveRequest;
-import com.backend.dto.response.FolderDto;
+import com.backend.dto.response.drive.FolderDto;
 import com.backend.entity.folder.Folder;
+import com.backend.entity.folder.Permission;
 import com.backend.entity.user.User;
-import com.backend.repository.FolderRepository;
+import com.backend.repository.FolderMogoRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Value;
@@ -17,6 +18,10 @@ import org.springframework.web.client.RestTemplate;
 
 import java.io.File;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -26,7 +31,7 @@ public class FolderService {
     private static final String BASE_UPLOAD_DIR = "/data/uploads/";
     private final SftpService sftpService;
     private final UserService userService;
-    private final FolderRepository folderRepository;
+    private final FolderMogoRepository folderMogoRepository;
     private String fileServerUrl = "http://43.202.45.49:90/local/upload/create-folder";
 
 
@@ -72,24 +77,22 @@ public class FolderService {
     }
 
 
-    public void createDrive(NewDriveRequest request){
+    public String createDrive(NewDriveRequest request){
 
 
         String uid = request.getOwner();
-//        boolean mkdir = sftpService.createUserFolderOnSftp(uid);
-        boolean makeDrive =  sftpService.createFolder(request.getName(),uid);
 
-        log.info("결과!!!!"+makeDrive);
+        String makeDrivePath =  sftpService.createFolder(request.getName(),uid);
 
-        if(makeDrive){
-            User user = User.builder()
-                    .uid(uid)
-                    .build();
+        log.info("결과!!!!"+makeDrivePath);
+
+        if(makeDrivePath != null){
            Folder folder =  Folder.builder()
                    .name(request.getName())
                    .order(0)
-                   .parent(null)
-                   .owner(user)
+                   .parentId(request.getParentId())
+                   .path(makeDrivePath)
+                   .ownerId(uid)
                    .description(request.getDescription())
                    .status(0)
                    .isShared(request.getIsShared())
@@ -97,13 +100,76 @@ public class FolderService {
                    .updatedAt(LocalDateTime.now())
                    .build();
 
-           Folder savedFolder =  folderRepository.save(folder);
-        }
+           Folder savedFolder =  folderMogoRepository.save(folder);
 
+           return savedFolder.getId();
+
+        }
+        return null;
+
+    }
+
+    public String createRootDrive(NewDriveRequest request){
+
+        String uid = request.getOwner();
+        String makeDrivePath =  sftpService.createRootFolder(request.getName(),uid);
+
+        log.info("결과!!!!"+makeDrivePath);
+
+        if(makeDrivePath != null){
+            Folder folder =  Folder.builder()
+                    .name(request.getName())
+                    .order(0)
+                    .parentId(null)
+                    .path(makeDrivePath)
+                    .ownerId(uid)
+                    .description(request.getDescription())
+                    .status(0)
+                    .isShared(request.getIsShared())
+                    .linkSharing(request.getLinkSharing())
+                    .updatedAt(LocalDateTime.now())
+                    .build();
+
+            Folder savedFolder =  folderMogoRepository.save(folder);
+
+            return savedFolder.getId();
+
+        }
+        return null;
+
+    }
+
+
+    public List<FolderDto> getFoldersByUid(String uid,String parentId){
+        List<Folder> folders = folderMogoRepository.findByOwnerIdAndAndParentId(uid,parentId);
+            List<FolderDto> folderDtos = folders.stream().map(folder -> {
+                FolderDto folderDto = FolderDto.builder()
+                        .id(folder.getId())
+                        .name(folder.getName())
+                        .order(folder.getOrder())
+                        .order(folder.getOrder())
+                        .createdAt(folder.getCreatedAt())
+                        .isShared(folder.getIsShared())
+                        .isPinned(folder.getIsPinned())
+                        .build();
+                return folderDto;
+            }).collect(Collectors.toList());
+            return folderDtos;
 
 
     }
 
 
+    public Folder getFolderName(String uid){
+        return folderMogoRepository.findByName(uid);
+    }
+
+
+    public List<FolderDto> getSubFolders(String folderId){
+        List<Folder> folders =folderMogoRepository.findByOwnerIdAndAndParentId(folderId,folderId);
+
+
+        return folders.stream().map(Folder::toDTO).collect(Collectors.toList());
+    }
 
 }

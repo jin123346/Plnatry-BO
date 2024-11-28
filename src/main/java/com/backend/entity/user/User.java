@@ -4,6 +4,7 @@ import com.backend.dto.request.admin.user.PatchAdminUserApprovalDto;
 import com.backend.dto.response.GetAdminUsersApprovalRespDto;
 import com.backend.dto.response.GetAdminUsersDtailRespDto;
 import com.backend.dto.response.GetAdminUsersRespDto;
+import com.backend.dto.response.UserDto;
 import com.backend.entity.group.Group;
 import com.backend.entity.group.GroupMapper;
 import com.backend.util.Role;
@@ -77,7 +78,7 @@ public class User {
     @Column(name = "refresh_token")
     private String refreshToken;
 
-    @OneToMany(mappedBy = "user")
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "user")
     @ToString.Exclude
     private List<GroupMapper> groupMappers;
 
@@ -95,6 +96,7 @@ public class User {
     private ProfileImg profileImg;
 
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "user")
+    @ToString.Exclude
     private List<Attendance> attendance;
 
 
@@ -178,5 +180,51 @@ public class User {
         LocalDate date = LocalDate.now();
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM");
         return date.format(formatter);
+    }
+
+
+    public UserDto toDto() {
+        return UserDto.builder()
+                .id(this.id)
+                .status(this.status)
+                .uid(this.uid)
+                .pwd(this.pwd)
+                .role(this.role)
+                .level(this.level)
+                .grade(this.grade)
+                .email(this.email)
+                .hp(this.hp)
+                .name(this.name)
+                .city(this.city)
+                .country(this.country)
+                .address(this.address)
+                .company(this.company)
+                .paymentToken(this.paymentToken)
+                .day(this.day)
+                .refreshToken(this.refreshToken)
+                .groupMappers(this.groupMappers)
+                .profileImg(this.profileImg != null ? this.profileImg.getSName() : "default.png") // 기본값 설정
+                .createAt(this.createAt)
+                .lastLogin(this.lastLogin)
+                .joinDate(this.joinDate)
+                .attendance(this.attendance)
+                .build();
+    }
+
+    public UserDto toSliceDto() {
+
+        String sname = profileImg != null ? profileImg.getSName() : ""; // null 체크 추가
+        return UserDto.builder()
+                .id(this.id)
+                .uid(this.uid)
+                .role(this.role)
+                .level(this.level)
+                .grade(this.grade)
+                .email(this.email)
+                .name(this.name)
+                .company(this.company)
+                .profileImg(sname)
+                .createAt(this.createAt)
+                .build();
     }
 }
