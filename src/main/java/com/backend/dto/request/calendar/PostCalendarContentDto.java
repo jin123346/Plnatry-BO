@@ -10,7 +10,7 @@ import org.w3c.dom.Text;
 @Setter
 @Builder
 public class PostCalendarContentDto {
-    private Long title;
+    private String title;
     private String sdate;
     private String edate;
     private String stime;

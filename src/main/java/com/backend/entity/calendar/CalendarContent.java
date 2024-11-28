@@ -1,5 +1,7 @@
 package com.backend.entity.calendar;
 
+import com.backend.dto.request.calendar.PutCalendarContentsDto;
+import com.backend.dto.response.calendar.GetCalendarContentNameDto;
 import com.backend.dto.response.calendar.GetCalendarsDto;
 import jakarta.persistence.*;
 import lombok.*;
@@ -57,11 +59,28 @@ public class CalendarContent {
     public GetCalendarsDto toGetCalendarsDto() {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
         String sdate = formatter.format(calendarStartDate);
+        String edate = formatter.format(calendarEndDate);
         return GetCalendarsDto.builder()
                 .title(name)
                 .id(calendarContentId)
-                .date(sdate)
+                .start(sdate)
+                .color(calendar.getColor())
+                .end(edate)
                 .build();
     }
 
+    public GetCalendarContentNameDto toGetCalendarContentNameDto() {
+        return GetCalendarContentNameDto.builder()
+                .id(calendarContentId)
+                .name(name)
+                .color(calendar.getColor())
+                .stime(startTime)
+                .build();
+    }
+
+    public void putContents(PutCalendarContentsDto dto) {
+        this.name = dto.getTitle();
+        this.calendarStartDate = LocalDate.parse(dto.getStartDate());
+        this.calendarEndDate = LocalDate.parse(dto.getEndDate());
+    }
 }

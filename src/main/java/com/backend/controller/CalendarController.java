@@ -1,11 +1,13 @@
 package com.backend.controller;
 
 import com.backend.dto.request.calendar.PostCalendarContentDto;
+import com.backend.dto.request.calendar.PutCalendarContentsDto;
 import com.backend.service.CalendarService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -19,8 +21,14 @@ public class CalendarController {
     public ResponseEntity<?> postCalendarContent (
             @RequestBody PostCalendarContentDto dto
             ) {
-        System.out.println(dto);
-        return ResponseEntity.ok().build();
+        ResponseEntity<?> response = calendarService.postCalendarContent(dto);
+        return response;
+    }
+
+    @GetMapping("/calendar/content/name/today")
+    public ResponseEntity<?> getCalendarContentToday () {
+        ResponseEntity<?> response = calendarService.getCalendarContentToday();
+        return response;
     }
 
     @GetMapping("/calendar/name")
@@ -37,11 +45,18 @@ public class CalendarController {
     ){
         if(calendarId==0){
             ResponseEntity<?> response = calendarService.getCalendar();
-            return ResponseEntity.ok().body(response);
+            return response;
         } else {
             ResponseEntity<?> response = calendarService.getCalendarByCalendarId(calendarId);
+            return response;
         }
+    }
 
-        return ResponseEntity.ok().build();
+    @PutMapping("/calendar/contents")
+    public ResponseEntity<?> putCalendarContents (
+            @RequestBody List<PutCalendarContentsDto> dtos
+    ){
+        ResponseEntity<?> response = calendarService.putCalendarContents(dtos);
+        return response;
     }
 }
