@@ -2,6 +2,7 @@ package com.backend.service;
 
 import com.backend.dto.request.admin.user.PatchAdminUserApprovalDto;
 import com.backend.dto.response.GetAdminUsersRespDto;
+import com.backend.dto.response.UserDto;
 import com.backend.entity.user.User;
 import com.backend.repository.UserRepository;
 import com.backend.util.Role;
@@ -33,4 +34,17 @@ public class UserService {
 
         return ResponseEntity.ok().body("승인처리하였습니다.");
     }
+
+
+    public User getUserByuid(String uid){
+        Optional<User> user = userRepository.findByUid(uid);
+        if(user.isEmpty()){
+            return null;
+        }
+
+        User findUser = user.get();
+
+        return findUser;
+    }
+
 }

@@ -29,9 +29,8 @@ public class ActivityLog {
     @JoinColumn(name = "file_id")
     private File file; // 작업 대상 파일 (NULL이면 폴더 작업)
 
-    @ManyToOne
-    @JoinColumn(name = "folder_id")
-    private Folder folder; // 작업 대상 폴더 (NULL이면 파일 작업)
+
+    private String folderId; // 작업 대상 폴더 (NULL이면 파일 작업)
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
