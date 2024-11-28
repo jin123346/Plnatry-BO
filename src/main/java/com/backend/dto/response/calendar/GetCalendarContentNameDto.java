@@ -8,9 +8,9 @@ import lombok.*;
 @Getter
 @Setter
 @Builder
-public class GetCalendarNameDto {
-    private Long id;
+public class GetCalendarContentNameDto {
     private String name;
-    private Integer status;
     private String color;
+    private String stime;
+    private Long id;
 }

@@ -11,5 +11,7 @@ import lombok.*;
 public class GetCalendarsDto {
     private Long id;
     private String title;
-    private String date;
+    private String start;
+    private String color;
+    private String end;
 }

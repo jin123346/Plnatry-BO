@@ -1,5 +1,6 @@
 package com.backend.entity.calendar;
 
+import com.backend.dto.response.calendar.GetCalendarContentNameDto;
 import com.backend.dto.response.calendar.GetCalendarNameDto;
 import com.backend.dto.response.calendar.GetCalendarsDto;
 import com.backend.entity.user.User;
@@ -32,6 +33,9 @@ public class Calendar {
     @Column(name = "calendar_name")
     private String name;
 
+    @Column(name = "calendar_color")
+    private String color;
+
     @OneToMany(mappedBy = "calendar",fetch = FetchType.EAGER)
     private List<CalendarContent> calendarContents = new ArrayList<>();
 
@@ -39,6 +43,8 @@ public class Calendar {
         return GetCalendarNameDto.builder()
                 .id(calendarId)
                 .name(name)
+                .status(status)
+                .color(color)
                 .build();
     }
 
