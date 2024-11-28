@@ -8,6 +8,8 @@ import lombok.*;
 import org.hibernate.annotations.DialectOverride;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 
 @AllArgsConstructor
@@ -29,17 +31,11 @@ public class CalendarContent {
     @JoinColumn(name = "calendar_id")
     private Calendar calendar;
 
-    @Column(name = "calendar_content_start_time")
-    private String startTime;
-
-    @Column(name = "calendar_content_end_time")
-    private String endTime;
-
     @Column(name = "calendar_content_start_date")
-    private LocalDate calendarStartDate;
+    private LocalDateTime calendarStartDate;
 
     @Column(name = "calendar_content_end_date")
-    private LocalDate calendarEndDate;
+    private LocalDateTime calendarEndDate;
 
     @Column(name = "calendar_content_name")
     private String name;  // 일정 이름
@@ -57,7 +53,7 @@ public class CalendarContent {
     private int importance; // 중요도
 
     public GetCalendarsDto toGetCalendarsDto() {
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
         String sdate = formatter.format(calendarStartDate);
         String edate = formatter.format(calendarEndDate);
         return GetCalendarsDto.builder()
@@ -70,17 +66,19 @@ public class CalendarContent {
     }
 
     public GetCalendarContentNameDto toGetCalendarContentNameDto() {
+        String stime = calendarStartDate.format(DateTimeFormatter.ofPattern("HH:mm"));
         return GetCalendarContentNameDto.builder()
                 .id(calendarContentId)
                 .name(name)
                 .color(calendar.getColor())
-                .stime(startTime)
+                .stime(stime)
                 .build();
     }
 
     public void putContents(PutCalendarContentsDto dto) {
         this.name = dto.getTitle();
-        this.calendarStartDate = LocalDate.parse(dto.getStartDate());
-        this.calendarEndDate = LocalDate.parse(dto.getEndDate());
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        this.calendarStartDate = LocalDateTime.parse(dto.getStartDate(), formatter);
+        this.calendarEndDate = LocalDateTime.parse(dto.getEndDate(), formatter);
     }
 }

@@ -1,8 +1,6 @@
 package com.backend.entity.calendar;
 
-import com.backend.dto.response.calendar.GetCalendarContentNameDto;
 import com.backend.dto.response.calendar.GetCalendarNameDto;
-import com.backend.dto.response.calendar.GetCalendarsDto;
 import com.backend.entity.user.User;
 import jakarta.persistence.*;
 import lombok.*;
@@ -26,9 +24,9 @@ public class Calendar {
     @Column(name = "calendar_status")
     private int status;                     // 0 삭제 1 메인캘린더 2 서브캘린더
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id")
-    private User user;
+    @OneToMany(fetch = FetchType.LAZY,mappedBy = "calendar")
+    @ToString.Exclude
+    private List<CalendarMapper> calendars;
 
     @Column(name = "calendar_name")
     private String name;
@@ -37,6 +35,7 @@ public class Calendar {
     private String color;
 
     @OneToMany(mappedBy = "calendar",fetch = FetchType.EAGER)
+    @ToString.Exclude
     private List<CalendarContent> calendarContents = new ArrayList<>();
 
     public GetCalendarNameDto toGetCalendarNameDto() {

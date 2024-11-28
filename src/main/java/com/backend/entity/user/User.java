@@ -5,7 +5,7 @@ import com.backend.dto.response.GetAdminUsersApprovalRespDto;
 import com.backend.dto.response.GetAdminUsersDtailRespDto;
 import com.backend.dto.response.GetAdminUsersRespDto;
 import com.backend.dto.response.UserDto;
-import com.backend.entity.group.Group;
+import com.backend.entity.calendar.CalendarMapper;
 import com.backend.entity.group.GroupMapper;
 import com.backend.util.Role;
 import jakarta.persistence.*;
@@ -99,6 +99,9 @@ public class User {
     @ToString.Exclude
     private List<Attendance> attendance;
 
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "user")
+    @ToString.Exclude
+    private List<CalendarMapper> calendars;
 
     public GetAdminUsersRespDto toGetAdminUsersRespDto() {
         return GetAdminUsersRespDto.builder()
