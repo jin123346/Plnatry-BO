@@ -1,6 +1,5 @@
 package com.backend.entity.message;
 
-import com.backend.entity.folder.Folder;
 import com.backend.entity.user.User;
 import jakarta.persistence.*;
 import lombok.*;
