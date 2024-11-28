@@ -2,10 +2,7 @@ package com.backend.entity.folder;
 
 import com.backend.entity.user.User;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.ToString;
+import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
@@ -15,6 +12,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @ToString
 @Getter
+@Builder
 @Table(name = "permission")
 public class Permission {
 
@@ -30,21 +28,16 @@ public class Permission {
     @JoinColumn(name = "file_id")
     private File file; // 권한이 적용된 파일 (NULL이면 폴더에 적용)
 
-    @ManyToOne
-    @JoinColumn(name = "folder_id")
-    private Folder folder; // 권한이 적용된 폴더 (NULL이면 파일에 적용)
+    @Column(nullable = true)
+    private String folderId; // MongoDB의 폴더 ID (folder._id)
 
-    @Column(nullable = false)
-    private int canRead;
+    @Column(nullable = true)
+    private String fileId; // MongoDB의 파일 ID (파일에 대한 권한인 경우)
 
-    @Column(nullable = false)
-    private int canWrite;
 
+    // 권한을 비트마스크로 저장
     @Column(nullable = false)
-    private int canDelete;
-
-    @Column(nullable = false)
-    private int canShare;
+    private int permissions;
 
     @CreationTimestamp
     private LocalDateTime createdAt; // 권한 생성 날짜 및 시간

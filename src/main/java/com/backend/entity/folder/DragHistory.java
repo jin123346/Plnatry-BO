@@ -32,13 +32,10 @@ public class DragHistory {
     @Column(nullable = false)
     private String itemType; // 항목 유형 ("FILE" 또는 "FOLDER")
 
-    @ManyToOne
-    @JoinColumn(name = "old_parent_id", nullable = false)
-    private Folder oldParent; // 드래그 이전의 부모 폴더
 
-    @ManyToOne
-    @JoinColumn(name = "new_parent_id", nullable = false)
-    private Folder newParent; // 드래그 이후의 부모 폴더
+    private String oldParent; // 드래그 이전의 부모 폴더
+
+    private String newParent; // 드래그 이후의 부모 폴더
 
     @CreationTimestamp
     private LocalDateTime dragAt; // 드래그 작업이 수행된 시간

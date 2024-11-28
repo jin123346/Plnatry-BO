@@ -38,7 +38,7 @@ public class SharedItem {
     private User sharedWith; // 공유받은 사용자
 
     @Column(nullable = false)
-    private String permissions = "r"; // 권한 (r: 읽기, rw: 읽기/쓰기)
+    private int permissions; // 권한 (r: 읽기, rw: 읽기/쓰기)
 
     @CreationTimestamp
     private LocalDateTime sharedAt; // 공유된 시간

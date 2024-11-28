@@ -1,6 +1,8 @@
 package com.backend.service;
 
 
+import com.backend.dto.request.drive.NewDriveRequest;
+import com.backend.repository.FolderMogoRepository;
 import com.jcraft.jsch.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -44,6 +46,8 @@ public class SftpService {
             channelSftp.disconnect();
             session.disconnect();
 
+
+
             log.info("Folder created and permissions set successfully on SFTP: {}", remoteDir);
             return true;
         } catch (SftpException | JSchException e) {
@@ -54,6 +58,7 @@ public class SftpService {
 
     public boolean deleteUserFolderOnSftp(String username) {
         String remoteDir = BASE_SFTP_DIR + username;
+
 
         try {
             JSch jsch = new JSch();
@@ -122,8 +127,15 @@ public class SftpService {
         System.out.println("File downloaded successfully from " + remoteDir + remoteFilePath);
     }
 
-    public boolean createFolder(String folderName,String username) {
-        String remoteDir = BASE_SFTP_DIR + username + "/"+ folderName;
+    public String createFolder(String folderName,String username) {
+
+        String remoteDir = "";
+        if(folderName.equals(username)){
+            remoteDir = BASE_SFTP_DIR + username;
+        }else{
+            remoteDir = BASE_SFTP_DIR + username + "/"+ folderName;
+
+        }
         log.info("remoteDIR!!! "+remoteDir);
         try {
             JSch jsch = new JSch();
@@ -143,10 +155,10 @@ public class SftpService {
             session.disconnect();
 
             log.info("Folder created and permissions set successfully on SFTP: {}", remoteDir);
-            return true;
+            return remoteDir;
         } catch (Exception e) {
             log.error("Error while creating folder: {}", e.getMessage());
-            return false;
+            return null;
         }
     }
 
@@ -182,6 +194,39 @@ public class SftpService {
         } catch (Exception e) {
             log.error("Failed to create nested folders: {}", e.getMessage());
             return false;
+        }
+    }
+
+
+
+
+  //사용자 생성시 root 폴더 생성 (폴더이름 -> username)
+    public String createRootFolder(String folderName,String username) {
+
+        String remoteDir = BASE_SFTP_DIR + username;
+        log.info("remoteDIR!!! "+remoteDir);
+        try {
+            JSch jsch = new JSch();
+            Session session = jsch.getSession(SFTP_USER, SFTP_HOST, SFTP_PORT);
+            session.setPassword(SFTP_PASSWORD);
+            session.setConfig("StrictHostKeyChecking", "no");
+            session.connect();
+
+            ChannelSftp channelSftp = (ChannelSftp) session.openChannel("sftp");
+            channelSftp.connect();
+
+            // SFTP 서버에 폴더 생성
+            channelSftp.mkdir(remoteDir);
+            log.info("Folder created successfully on SFTP: {}", remoteDir);
+
+            channelSftp.disconnect();
+            session.disconnect();
+
+            log.info("Folder created and permissions set successfully on SFTP: {}", remoteDir);
+            return remoteDir;
+        } catch (Exception e) {
+            log.error("Error while creating folder: {}", e.getMessage());
+            return null;
         }
     }
 

@@ -1,6 +1,7 @@
 package com.backend.entity.folder;
 
 import com.backend.entity.user.User;
+import com.backend.util.Status;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -23,9 +24,8 @@ public class File {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id; // 파일의 고유 ID
 
-    @ManyToOne
-    @JoinColumn(name = "folder_id", nullable = false)
-    private Folder folder; // 파일이 속한 폴더
+
+    private String folderId; // 파일이 속한 폴더
 
     @Column(nullable = false)
     private String name; // 파일 이름 (사용자가 지정한 이름)
@@ -48,7 +48,7 @@ public class File {
     private Integer version = 1; // 파일 버전 (업데이트 시 증가)
 
     @Column(nullable = false)
-    private Boolean isDeleted = false; // 파일 삭제 여부 (논리적 삭제)
+    private Status status; // 파일 삭제 여부 (논리적 삭제)
 
     @CreationTimestamp
     private LocalDateTime createdAt; // 파일 생성 날짜 및 시간
