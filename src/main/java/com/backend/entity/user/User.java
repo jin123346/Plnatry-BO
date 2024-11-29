@@ -108,6 +108,7 @@ public class User {
                 .email(email)
                 .uid(uid)
                 .id(id)
+                .name(name)
                 .build();
     }
 
