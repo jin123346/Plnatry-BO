@@ -94,7 +94,7 @@ public class FolderService {
         if(makeDrivePath != null){
            Folder folder =  Folder.builder()
                    .name(request.getName())
-                   .order(0)
+                   .order(request.getOrder() != 0 ? request.getOrder() : 0) // 널 체크
                    .parentId(request.getParentId())
                    .path(makeDrivePath)
                    .ownerId(uid)
