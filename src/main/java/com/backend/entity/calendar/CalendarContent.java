@@ -81,4 +81,8 @@ public class CalendarContent {
         this.calendarStartDate = LocalDateTime.parse(dto.getStartDate(), formatter);
         this.calendarEndDate = LocalDateTime.parse(dto.getEndDate(), formatter);
     }
+
+    public void patchStatus(int i) {
+        this.status = i;
+    }
 }
