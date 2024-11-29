@@ -47,4 +47,10 @@ public class UserService {
         return findUser;
     }
 
+    // 11.29 전규찬 전체 사용자 조회 기능 추가
+    public List<GetAdminUsersRespDto> getAllUsers() {
+        List<User> users = userRepository.findAll();
+        return users.stream().map(User::toGetAdminUsersRespDto).toList();
+    }
+
 }

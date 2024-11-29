@@ -30,6 +30,7 @@ public class GroupMapper {
                 .email(user.getEmail())
                 .id(user.getId())
                 .uid(user.getUid())
+                .name(user.getName())
                 .build();
     }
 }

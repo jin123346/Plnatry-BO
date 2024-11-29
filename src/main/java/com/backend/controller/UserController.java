@@ -34,6 +34,13 @@ public class UserController {
         return ResponseEntity.ok(users);
     }
 
+    // 11.29 전규찬 전체 사용자 조회
+    @GetMapping("/allUsers")
+    public ResponseEntity<?> getAllUser(){
+        List<GetAdminUsersRespDto> users = userService.getAllUsers();
+        return ResponseEntity.ok(users);
+    }
+
     @PatchMapping("/admin/user/approval")
     public ResponseEntity<?> patchUserApproval(
             @RequestBody PatchAdminUserApprovalDto dto
