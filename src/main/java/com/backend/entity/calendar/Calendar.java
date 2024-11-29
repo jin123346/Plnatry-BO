@@ -1,5 +1,6 @@
 package com.backend.entity.calendar;
 
+import com.backend.dto.response.calendar.GetCalendarContentNameDto;
 import com.backend.dto.response.calendar.GetCalendarNameDto;
 import com.backend.entity.user.User;
 import jakarta.persistence.*;

@@ -1,5 +1,6 @@
 package com.backend.repository.calendar;
 
+import com.backend.entity.calendar.Calendar;
 import com.backend.entity.calendar.CalendarContent;
 import com.backend.entity.user.User;
 import org.springframework.data.jpa.repository.JpaRepository;
