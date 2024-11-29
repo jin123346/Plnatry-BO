@@ -4,6 +4,7 @@ import com.backend.dto.request.PostDepartmentReqDto;
 import com.backend.dto.response.GetAdminUsersRespDto;
 import com.backend.service.GroupService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
 import org.apache.coyote.Response;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -12,6 +13,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@Log4j2
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
@@ -67,6 +69,7 @@ public class GroupController {
     public ResponseEntity<?> getUsers(
             @RequestParam(value = "team",defaultValue = "") String team
     ){
+        log.info("team : " + team);
         ResponseEntity<?> response = groupService.getGroupMembers(team);
         return response;
     }

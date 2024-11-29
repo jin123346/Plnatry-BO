@@ -16,7 +16,8 @@ public class ChatController {
     private final ChatService chatService;
 
     @PostMapping("/room")
-    public ResponseEntity<?> createRoom(@RequestParam("chatMembers") String chatMembers) {
+    public ResponseEntity<?> createRoom(@RequestParam("chatMembers") String chatMembers,
+                                        @ModelAttribute ChatRoomDTO chatRoomDTO) {
 
         log.info("chatMembers : " + chatMembers);
 

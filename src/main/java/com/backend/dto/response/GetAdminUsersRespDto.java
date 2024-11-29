@@ -14,4 +14,5 @@ public class GetAdminUsersRespDto {
     private String uid;
     private String email;
     private String imgPath;
+    private String name;
 }

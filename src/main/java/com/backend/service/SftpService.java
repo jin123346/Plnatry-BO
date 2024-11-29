@@ -230,6 +230,35 @@ public class SftpService {
         }
     }
 
+    public String createNewFolder(String folderName,String parentPath) {
+        String remoteDir = parentPath +"/"+ folderName;
+        log.info("remoteDIR!!! "+remoteDir);
+        try {
+            JSch jsch = new JSch();
+            Session session = jsch.getSession(SFTP_USER, SFTP_HOST, SFTP_PORT);
+            session.setPassword(SFTP_PASSWORD);
+            session.setConfig("StrictHostKeyChecking", "no");
+            session.connect();
+
+            ChannelSftp channelSftp = (ChannelSftp) session.openChannel("sftp");
+            channelSftp.connect();
+
+            // SFTP 서버에 폴더 생성
+            channelSftp.mkdir(remoteDir);
+            log.info("Folder created successfully on SFTP: {}", remoteDir);
+
+            channelSftp.disconnect();
+            session.disconnect();
+
+            log.info("Folder created and permissions set successfully on SFTP: {}", remoteDir);
+            return remoteDir;
+        } catch (Exception e) {
+            log.error("Error while creating folder: {}", e.getMessage());
+            return null;
+        }
+
+    }
+
 
 
 }
