@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -66,8 +67,11 @@ public class CalendarService {
         if(contents.isEmpty()){
             return ResponseEntity.ok("일정이 없습니다.");
         }
-        List<GetCalendarsDto> dtos = contents.stream().map(CalendarContent::toGetCalendarsDto).toList();
-        System.out.println(dtos);
+        List<CalendarContent> filteredContents = contents.stream().filter(v->{
+            boolean isStatus = v.getStatus()!=0;
+            return isStatus;
+        }).toList();
+        List<GetCalendarsDto> dtos = filteredContents.stream().map(CalendarContent::toGetCalendarsDto).toList();
         return ResponseEntity.ok(dtos);
     }
 
@@ -77,10 +81,15 @@ public class CalendarService {
             return ResponseEntity.ok("캘린더가 존재하지 않습니다.");
         }
         List<CalendarContent> contents = calendar.get().getCalendarContents();
+
         if(contents.isEmpty()){
             return ResponseEntity.ok("등록된 일정이 없습니다.");
         }
-        List<GetCalendarsDto> dtos = contents.stream().map(CalendarContent::toGetCalendarsDto).toList();
+        List<CalendarContent> filteredContents = contents.stream().filter(v->{
+            boolean isStatus = v.getStatus()!=0;
+            return isStatus;
+        }).toList();
+        List<GetCalendarsDto> dtos = filteredContents.stream().map(CalendarContent::toGetCalendarsDto).toList();
         return ResponseEntity.ok(dtos);
     }
 
@@ -96,15 +105,16 @@ public class CalendarService {
             return ResponseEntity.ok().body("등록된 캘린더가 없습니다.");
         }
         List<Calendar> calendars = calendarMappers.stream().map(CalendarMapper::getCalendar).toList();
-        System.out.println(calendars);
+
         List<CalendarContent> contents = new ArrayList<>();
         for(Calendar calendar : calendars){
             List<CalendarContent> smallContents = calendar.getCalendarContents().stream()
                     .filter(v -> {
+                        boolean isStatus = v.getStatus()!=0;
                         LocalDateTime startDate = v.getCalendarStartDate();
                         LocalDateTime endDate = v.getCalendarEndDate().minusDays(1);
                         LocalDateTime now = LocalDateTime.now();
-                        return (startDate.isEqual(now) || startDate.isBefore(now)) && (endDate.isEqual(now) || endDate.isAfter(now));
+                        return (startDate.isEqual(now) || startDate.isBefore(now)) && (endDate.isEqual(now) || endDate.isAfter(now)) && isStatus;
                     })
                     .collect(Collectors.toList());
             contents.addAll(smallContents);
@@ -129,12 +139,12 @@ public class CalendarService {
         if(calendar.isEmpty()){
             return ResponseEntity.badRequest().body("등록된 캘린더가 없습니다.");
         }
-
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
         CalendarContent calendarContent = CalendarContent.builder()
                 .calendar(calendar.get())
                 .alertStatus(dto.getAlert())
-                .calendarEndDate(LocalDateTime.parse(dto.getEdate()))
-                .calendarStartDate(LocalDateTime.parse(dto.getSdate()))
+                .calendarEndDate(LocalDateTime.parse(dto.getEdate(), formatter))
+                .calendarStartDate(LocalDateTime.parse(dto.getSdate(), formatter))
                 .name(dto.getTitle())
                 .memo(dto.getMemo())
                 .importance(dto.getImportance())
@@ -162,5 +172,108 @@ public class CalendarService {
         }
 
         return ResponseEntity.ok().body("수정이 완료되었습니다.");
+    }
+
+    public ResponseEntity<?> getCalendarContentAfternoon(String today) {
+        Long userId = 9L;
+        Optional<User> user = userRepository.findById(userId);
+        if(user.isEmpty()){
+            return ResponseEntity.badRequest().body("로그인 정보가 일치하지않습니다...");
+        }
+
+        List<CalendarMapper> mappers = calendarMapperRepository.findAllByUserAndCalendar_StatusIsNot(user.get(),0);
+        if(mappers.isEmpty()){
+            return ResponseEntity.ok().body("등록된 캘린더가 없습니다.");
+        }
+
+        List<Calendar> calendars = mappers.stream().map(CalendarMapper::getCalendar).toList();
+
+        List<CalendarContent> contents = new ArrayList<>();
+        for (Calendar calendar : calendars) {
+            String newToday = today + " 00:00:00";  // 특정 날짜의 기준을 00:00:00으로 설정
+            List<CalendarContent> smallContents = calendar.getCalendarContents().stream()
+                    .filter(v -> {
+                        LocalDateTime startDate = v.getCalendarStartDate();  // 일정의 시작시간
+                        LocalDateTime endDate = v.getCalendarEndDate();      // 일정의 종료시간
+                        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+                        LocalDateTime now = LocalDateTime.parse(newToday, formatter);  // 특정 날짜 파싱
+
+                        // 오늘의 12시부터 18시까지의 범위 설정
+                        LocalDateTime todayStart = now.toLocalDate().atTime(12, 0);  // 오늘 12:00
+                        LocalDateTime todayEnd = now.toLocalDate().atTime(18, 0);   // 오늘 18:00
+                        boolean isStatus = v.getStatus()!=0;
+                        boolean isTodayBetweenStartAndEnd = !now.toLocalDate().isBefore(startDate.toLocalDate()) &&
+                                !now.toLocalDate().isAfter(endDate.toLocalDate());
+                        // startDate와 endDate가 특정 날짜의 12시부터 18시 사이에 포함되는지 확인
+                        boolean isStartTimeInRange = startDate.toLocalTime().isAfter(todayStart.toLocalTime()) &&
+                                startDate.toLocalTime().isBefore(todayEnd.toLocalTime());  // startDate가 12시부터 18시 사이
+                        boolean isEndTimeInRange = endDate.toLocalTime().isAfter(todayStart.toLocalTime()) &&
+                                endDate.toLocalTime().isBefore(todayEnd.toLocalTime());    // endDate가 12시부터 18시 사이
+
+                        // startDate와 endDate의 시간이 모두 12시~18시 사이에 포함되는지 체크
+                        return isStartTimeInRange && isEndTimeInRange && isTodayBetweenStartAndEnd && isStatus;
+                    })
+                    .toList();
+
+            contents.addAll(smallContents);  // 필터링된 결과를 contents에 추가
+        }
+        List<GetCalendarContentNameDto> dtos = contents.stream().map(CalendarContent::toGetCalendarContentNameDto).toList();
+        return ResponseEntity.ok(dtos);
+    }
+
+    public ResponseEntity<?> getCalendarContentMorning(String today) {
+        Long userId = 9L;
+        Optional<User> user = userRepository.findById(userId);
+        if(user.isEmpty()){
+            return ResponseEntity.badRequest().body("로그인 정보가 일치하지않습니다...");
+        }
+
+        List<CalendarMapper> mappers = calendarMapperRepository.findAllByUserAndCalendar_StatusIsNot(user.get(),0);
+        if(mappers.isEmpty()){
+            return ResponseEntity.ok().body("등록된 캘린더가 없습니다.");
+        }
+
+        List<Calendar> calendars = mappers.stream().map(CalendarMapper::getCalendar).toList();
+
+        List<CalendarContent> contents = new ArrayList<>();
+        for (Calendar calendar : calendars) {
+            String newToday = today + " 00:00:00";  // 특정 날짜의 기준을 00:00:00으로 설정
+            List<CalendarContent> smallContents = calendar.getCalendarContents().stream()
+                    .filter(v -> {
+                        LocalDateTime startDate = v.getCalendarStartDate();  // 일정의 시작시간
+                        LocalDateTime endDate = v.getCalendarEndDate();      // 일정의 종료시간
+                        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+                        LocalDateTime now = LocalDateTime.parse(newToday, formatter);  // 특정 날짜 파싱
+
+                        // 오늘의 12시부터 18시까지의 범위 설정
+                        LocalDateTime todayStart = now.toLocalDate().atTime(6, 0);  // 오늘 12:00
+                        LocalDateTime todayEnd = now.toLocalDate().atTime(12, 0);   // 오늘 18:00
+                        boolean isStatus = v.getStatus()!=0;
+                        boolean isTodayBetweenStartAndEnd = !now.toLocalDate().isBefore(startDate.toLocalDate()) &&
+                                !now.toLocalDate().isAfter(endDate.toLocalDate());
+                        // startDate와 endDate가 특정 날짜의 12시부터 18시 사이에 포함되는지 확인
+                        boolean isStartTimeInRange = startDate.toLocalTime().isAfter(todayStart.toLocalTime()) &&
+                                startDate.toLocalTime().isBefore(todayEnd.toLocalTime());  // startDate가 12시부터 18시 사이
+                        boolean isEndTimeInRange = endDate.toLocalTime().isAfter(todayStart.toLocalTime()) &&
+                                endDate.toLocalTime().isBefore(todayEnd.toLocalTime());    // endDate가 12시부터 18시 사이
+
+                        // startDate와 endDate의 시간이 모두 12시~18시 사이에 포함되는지 체크
+                        return isStartTimeInRange && isEndTimeInRange && isTodayBetweenStartAndEnd && isStatus;
+                    })
+                    .toList();
+
+            contents.addAll(smallContents);  // 필터링된 결과를 contents에 추가
+        }
+        List<GetCalendarContentNameDto> dtos = contents.stream().map(CalendarContent::toGetCalendarContentNameDto).toList();
+        return ResponseEntity.ok(dtos);
+    }
+
+    public ResponseEntity<?> deleteCalendarContent(Long id) {
+        Optional<CalendarContent> content = calendarContentRepository.findByCalendarContentId(id);
+        if(content.isEmpty()){
+            return ResponseEntity.badRequest().body("일정이 존재하지않습니다..");
+        }
+        content.get().patchStatus(0);
+        return ResponseEntity.ok().body("삭제되었습니다.");
     }
 }
