@@ -1,6 +1,5 @@
 package com.backend.entity.calendar;
 
-import com.backend.entity.page.Page;
 import com.backend.entity.user.User;
 import jakarta.persistence.*;
 import lombok.*;
@@ -14,8 +13,8 @@ import java.time.LocalDateTime;
 @ToString
 @Getter
 @Builder
-@Table(name = "permission_calendar")
-public class PermissionCalendar {
+@Table(name = "calendar_mapper")
+public class CalendarMapper {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "permission_calendar_id")
@@ -26,7 +25,7 @@ public class PermissionCalendar {
     private User user; // 권한을 가진 사용자
 
     @ManyToOne
-    @JoinColumn(name = "page_id")
+    @JoinColumn(name = "calendar_id")
     private Calendar calendar; // 권한이 적용된 파일 (NULL이면 폴더에 적용)
 
     @Column(nullable = false)

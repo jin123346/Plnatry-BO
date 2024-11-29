@@ -1,4 +1,4 @@
-package com.backend.repository;
+package com.backend.repository.calendar;
 
 import com.backend.entity.calendar.Calendar;
 import com.backend.entity.calendar.CalendarContent;
@@ -12,7 +12,5 @@ import java.util.Optional;
 
 @Repository
 public interface CalendarContentRepository extends JpaRepository<CalendarContent, Long> {
-    List<CalendarContent> findAllByCalendar_UserAndCalendarStartDateEqualsAndCalendar_StatusIsNot(User user, LocalDate now, int i);
-
     Optional<CalendarContent> findByCalendarContentId(Long contentId);
 }
