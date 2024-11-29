@@ -64,6 +64,24 @@ public class DriveController {
     }
 
 
+    @PostMapping("/newFolder")
+    public void createFolder(@RequestBody NewDriveRequest newDriveRequest) {
+        log.info("New drive request: " + newDriveRequest);
+
+        FolderDto folderDto = folderService.getParentFolder(newDriveRequest.getParentId());
+        newDriveRequest.setParentFolder(folderDto);
+        newDriveRequest.setOrder(folderDto.getOrder()+1);
+        User currentUser = userService.getUserByuid(newDriveRequest.getOwner());
+
+        String folderId = folderService.createDrive(newDriveRequest);
+
+        //권한설정 저장
+        permissionService.createPermission(folderId,currentUser);
+
+
+    }
+
+    //사이드바  폴더 리스트 불러오기
     @GetMapping("/folders")
     public ResponseEntity getDriveList(@RequestParam String uid){
 
@@ -75,7 +93,6 @@ public class DriveController {
         if (rootFolder == null) {
             return ResponseEntity.ok().body("No folders found.");
         }
-
         List<FolderDto> folderDtoList =  folderService.getFoldersByUid(uid, rootFolder.getId());
         log.info("folderLIst!!!!"+folderDtoList);
 
@@ -84,10 +101,11 @@ public class DriveController {
     }
 
 
+    //각 폴더의 컨텐츠 가져오기
     @GetMapping("/folder-contents")
-    public ResponseEntity<Map<String, Object>> getFolderContents(@RequestParam String folderId){
+    public ResponseEntity<Map<String, Object>> getFolderContents(@RequestParam String folderId,@RequestParam String ownerId){
         Map<String,Object> response = new HashMap<>();
-        List<FolderDto> subFolders = folderService.getSubFolders(folderId);
+        List<FolderDto> subFolders = folderService.getSubFolders(ownerId,folderId);
         response.put("subFolders", subFolders);
 
         log.info("subFolders:"+subFolders);
@@ -95,5 +113,15 @@ public class DriveController {
 
         return ResponseEntity.ok().body(response);
 
+    }
+
+    //폴더 이름 바꾸기
+    @PutMapping("/folder/{text}/rename")
+    public ResponseEntity renameFolder(@RequestParam String newFolderName,@PathVariable String text){
+        log.info("Rename folder name:"+newFolderName);
+
+        folderService.updateFolder(text, newFolderName);
+
+        return null;
     }
 }

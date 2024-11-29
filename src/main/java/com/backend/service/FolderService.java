@@ -78,11 +78,16 @@ public class FolderService {
 
 
     public String createDrive(NewDriveRequest request){
-
-
         String uid = request.getOwner();
+        String makeDrivePath = null;
+        if(request.getParentFolder() !=null){
+            FolderDto folderDto = request.getParentFolder();
+           makeDrivePath = sftpService.createNewFolder(request.getName(), folderDto.getPath());
 
-        String makeDrivePath =  sftpService.createFolder(request.getName(),uid);
+        }else{
+            makeDrivePath = sftpService.createFolder(request.getName(),uid);
+
+        }
 
         log.info("결과!!!!"+makeDrivePath);
 
@@ -147,7 +152,6 @@ public class FolderService {
                         .id(folder.getId())
                         .name(folder.getName())
                         .order(folder.getOrder())
-                        .order(folder.getOrder())
                         .createdAt(folder.getCreatedAt())
                         .isShared(folder.getIsShared())
                         .isPinned(folder.getIsPinned())
@@ -165,11 +169,35 @@ public class FolderService {
     }
 
 
-    public List<FolderDto> getSubFolders(String folderId){
-        List<Folder> folders =folderMogoRepository.findByOwnerIdAndAndParentId(folderId,folderId);
+    public List<FolderDto> getSubFolders(String ownerId, String folderId){
+        List<Folder> folders =folderMogoRepository.findByOwnerIdAndAndParentId(ownerId,folderId);
 
 
         return folders.stream().map(Folder::toDTO).collect(Collectors.toList());
     }
+
+    public FolderDto getParentFolder(String folderId){
+        Optional<Folder> opt = folderMogoRepository.findById(folderId);
+        if(opt.isPresent()){
+            Folder folder = opt.get();
+            FolderDto folderDto = folder.toDTO();
+            return folderDto;
+        }
+        return null;
+    }
+
+    public FolderDto updateFolder(String text, String newName){
+        Optional<Folder> opt = folderMogoRepository.findById(text);
+        FolderDto result = null;
+        if(opt.isPresent()){
+            Folder folder = opt.get();
+            folder.newFileName(newName);
+            Folder savedFolder= folderMogoRepository.save(folder);
+            result = savedFolder.toDTO();
+        }
+
+        return result;
+    }
+
 
 }

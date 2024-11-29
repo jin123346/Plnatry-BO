@@ -62,4 +62,8 @@ public class Folder {
                 .isPinned(this.isPinned)
                 .build();
     }
+
+    public void newFileName(String newFileName){
+        this.name = newFileName;
+    }
 }
