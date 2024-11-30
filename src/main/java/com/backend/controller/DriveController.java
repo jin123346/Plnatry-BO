@@ -1,6 +1,7 @@
 package com.backend.controller;
 
 
+import com.backend.dto.request.drive.MoveFolderRequest;
 import com.backend.dto.request.drive.NewDriveRequest;
 import com.backend.dto.response.UserDto;
 import com.backend.dto.response.drive.FolderDto;
@@ -13,6 +14,7 @@ import com.backend.service.SftpService;
 import com.backend.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -70,7 +72,6 @@ public class DriveController {
 
         FolderDto folderDto = folderService.getParentFolder(newDriveRequest.getParentId());
         newDriveRequest.setParentFolder(folderDto);
-        newDriveRequest.setOrder(folderDto.getOrder()+1);
         User currentUser = userService.getUserByuid(newDriveRequest.getOwner());
 
         String folderId = folderService.createDrive(newDriveRequest);
@@ -124,4 +125,23 @@ public class DriveController {
 
         return null;
     }
+
+
+    //폴더 이름 바꾸기
+    @PutMapping("/folder/{folderId}/move")
+    public ResponseEntity moveFolder(@RequestBody MoveFolderRequest moveFolderRequest, @PathVariable String folderId){
+        log.info("move folder name:"+moveFolderRequest);
+
+        double changedOrder =  folderService.updateFolder(moveFolderRequest);
+
+        if(moveFolderRequest.getOrder()== changedOrder){
+            return ResponseEntity.ok().body("Folder updated successfully");
+        }else{
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Folder update failed");
+        }
+
+
+    }
+
+
 }

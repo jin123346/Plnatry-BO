@@ -1,6 +1,7 @@
 package com.backend.service;
 
 
+import com.backend.dto.request.drive.MoveFolderRequest;
 import com.backend.dto.request.drive.NewDriveRequest;
 import com.backend.dto.response.drive.FolderDto;
 import com.backend.entity.folder.Folder;
@@ -94,7 +95,7 @@ public class FolderService {
         if(makeDrivePath != null){
            Folder folder =  Folder.builder()
                    .name(request.getName())
-                   .order(request.getOrder() != 0 ? request.getOrder() : 0) // 널 체크
+                   .order(request.getOrder() != 0.0 ? request.getOrder() : 0.0) // 널 체크
                    .parentId(request.getParentId())
                    .path(makeDrivePath)
                    .ownerId(uid)
@@ -124,7 +125,7 @@ public class FolderService {
         if(makeDrivePath != null){
             Folder folder =  Folder.builder()
                     .name(request.getName())
-                    .order(0)
+                    .order(0.0)
                     .parentId(null)
                     .path(makeDrivePath)
                     .ownerId(uid)
@@ -146,7 +147,7 @@ public class FolderService {
 
 
     public List<FolderDto> getFoldersByUid(String uid,String parentId){
-        List<Folder> folders = folderMogoRepository.findByOwnerIdAndAndParentId(uid,parentId);
+        List<Folder> folders = folderMogoRepository.findByOwnerIdAndAndParentIdOrderByOrder(uid,parentId);
             List<FolderDto> folderDtos = folders.stream().map(folder -> {
                 FolderDto folderDto = FolderDto.builder()
                         .id(folder.getId())
@@ -170,7 +171,7 @@ public class FolderService {
 
 
     public List<FolderDto> getSubFolders(String ownerId, String folderId){
-        List<Folder> folders =folderMogoRepository.findByOwnerIdAndAndParentId(ownerId,folderId);
+        List<Folder> folders =folderMogoRepository.findByOwnerIdAndAndParentIdOrderByOrder(ownerId,folderId);
 
 
         return folders.stream().map(Folder::toDTO).collect(Collectors.toList());
@@ -197,6 +198,21 @@ public class FolderService {
         }
 
         return result;
+    }
+
+
+    public double updateFolder(MoveFolderRequest updateRequest) {
+        // Optional을 사용하여 폴더를 조회
+        Folder folder = folderMogoRepository.findById(updateRequest.getFolderId())
+                .orElseThrow(() -> new RuntimeException("Folder not found with ID: " + updateRequest.getTargetFolderId()));
+
+        // 폴더가 존재하면 order 업데이트
+        folder.moveOrder(updateRequest.getOrder());
+
+        // 변경된 폴더 저장
+        Folder changedFolder =folderMogoRepository.save(folder);
+
+        return changedFolder.getOrder();
     }
 
 

@@ -27,7 +27,7 @@ public class Folder {
     private String path; // 폴더 경로
     private String name; // 폴더 이름
     private String ownerId;
-    private Integer order; // 폴더 순서 (같은 부모 폴더 내에서의 정렬)
+    private Double order; // 폴더 순서 (같은 부모 폴더 내에서의 정렬)
     private String description; // 폴더 설명
     @CreationTimestamp
     private LocalDateTime createdAt; // 폴더 생성 날짜 및 시간
@@ -66,4 +66,6 @@ public class Folder {
     public void newFileName(String newFileName){
         this.name = newFileName;
     }
+
+    public void moveOrder(double newOrder){this.order = newOrder;}
 }
