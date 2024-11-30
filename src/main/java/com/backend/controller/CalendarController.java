@@ -74,6 +74,7 @@ public class CalendarController {
     public ResponseEntity<?> putCalendarContents (
             @RequestBody List<PutCalendarContentsDto> dtos
     ){
+        System.out.println(dtos.get(0).getStartDate());
         ResponseEntity<?> response = calendarService.putCalendarContents(dtos);
         return response;
     }
