@@ -1,5 +1,4 @@
 package com.backend.dto.request.calendar;
-
 import lombok.*;
 
 @AllArgsConstructor
@@ -8,15 +7,14 @@ import lombok.*;
 @Getter
 @Setter
 @Builder
-public class PostCalendarContentDto {
+public class PutCalendarContentDto {
     private String title;
     private String sdate;
     private String edate;
-    private String stime;
-    private String etime;
     private Long calendarId;
     private String location;
     private Integer importance;
     private Integer alert;
     private String memo;
+    private Long sheave;
 }

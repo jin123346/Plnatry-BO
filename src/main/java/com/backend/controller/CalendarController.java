@@ -1,6 +1,7 @@
 package com.backend.controller;
 
 import com.backend.dto.request.calendar.PostCalendarContentDto;
+import com.backend.dto.request.calendar.PutCalendarContentDto;
 import com.backend.dto.request.calendar.PutCalendarContentsDto;
 import com.backend.service.CalendarService;
 import lombok.RequiredArgsConstructor;
@@ -75,6 +76,14 @@ public class CalendarController {
     ){
         System.out.println(dtos.get(0).getStartDate());
         ResponseEntity<?> response = calendarService.putCalendarContents(dtos);
+        return response;
+    }
+
+    @PutMapping("/calendar/content")
+    public ResponseEntity<?> putCalendarContents (
+            @RequestBody PutCalendarContentDto dto
+    ){
+        ResponseEntity<?> response = calendarService.putCalendarContent(dto);
         return response;
     }
 

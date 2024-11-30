@@ -14,4 +14,10 @@ public class GetCalendarsDto {
     private String start;
     private String color;
     private String end;
+    private Long sheave;
+    private String location;
+    private Integer importance;
+    private Integer alert;
+    private String memo;
+
 }

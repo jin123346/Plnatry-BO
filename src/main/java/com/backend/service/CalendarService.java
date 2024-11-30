@@ -1,6 +1,7 @@
 package com.backend.service;
 
 import com.backend.dto.request.calendar.PostCalendarContentDto;
+import com.backend.dto.request.calendar.PutCalendarContentDto;
 import com.backend.dto.request.calendar.PutCalendarContentsDto;
 import com.backend.dto.response.calendar.GetCalendarContentNameDto;
 import com.backend.dto.response.calendar.GetCalendarNameDto;
@@ -21,9 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -112,11 +111,11 @@ public class CalendarService {
                     .filter(v -> {
                         boolean isStatus = v.getStatus()!=0;
                         LocalDateTime startDate = v.getCalendarStartDate();
-                        LocalDateTime endDate = v.getCalendarEndDate().minusDays(1);
+                        LocalDateTime endDate = v.getCalendarEndDate();
                         LocalDateTime now = LocalDateTime.now();
                         return (startDate.isEqual(now) || startDate.isBefore(now)) && (endDate.isEqual(now) || endDate.isAfter(now)) && isStatus;
                     })
-                    .collect(Collectors.toList());
+                    .toList();
             contents.addAll(smallContents);
         }
 
@@ -153,8 +152,11 @@ public class CalendarService {
                 .build();
 
         calendarContentRepository.save(calendarContent);
-
-        return ResponseEntity.ok("등록이 완료되었습니다.");
+        Map<String, Object> map = new HashMap<>();
+        map.put("message","등록이 완료되었습니다.");
+        map.put("color",calendar.get().getColor());
+        map.put("id",calendarContent.getCalendarContentId());
+        return ResponseEntity.ok(map);
     }
 
     public ResponseEntity<?> putCalendarContents(List<PutCalendarContentsDto> dtos) {
@@ -274,6 +276,27 @@ public class CalendarService {
             return ResponseEntity.badRequest().body("일정이 존재하지않습니다..");
         }
         content.get().patchStatus(0);
-        return ResponseEntity.ok().body("삭제되었습니다.");
+        Map<String, Object> map = new HashMap<>();
+        map.put("id",content.get().getCalendarContentId());
+        map.put("message","삭제되었습니다.");
+        return ResponseEntity.ok().body(map);
+    }
+
+    public ResponseEntity<?> putCalendarContent(PutCalendarContentDto dto) {
+        Optional<CalendarContent> content = calendarContentRepository.findByCalendarContentId(dto.getCalendarId());
+        if(content.isEmpty()){
+            return ResponseEntity.badRequest().body("일정이 존재하지않습니다..");
+        }
+        Optional<Calendar> calendar = calendarRepository.findByCalendarId(dto.getSheave());
+        if(calendar.isEmpty()){
+            return ResponseEntity.badRequest().body("캘린더가 존재하지않습니다..");
+        }
+        String color = calendar.get().getColor();
+        content.get().putContent(dto,calendar.get());
+
+        Map<String, Object> map = new HashMap<>();
+        map.put("message","일정이 수정되었습니다.");
+        map.put("color",color);
+        return ResponseEntity.ok().body(map);
     }
 }

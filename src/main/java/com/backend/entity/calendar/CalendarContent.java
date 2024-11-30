@@ -1,5 +1,6 @@
 package com.backend.entity.calendar;
 
+import com.backend.dto.request.calendar.PutCalendarContentDto;
 import com.backend.dto.request.calendar.PutCalendarContentsDto;
 import com.backend.dto.response.calendar.GetCalendarContentNameDto;
 import com.backend.dto.response.calendar.GetCalendarsDto;
@@ -53,14 +54,19 @@ public class CalendarContent {
     private int importance; // 중요도
 
     public GetCalendarsDto toGetCalendarsDto() {
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
         String sdate = formatter.format(calendarStartDate);
         String edate = formatter.format(calendarEndDate);
         return GetCalendarsDto.builder()
                 .title(name)
+                .sheave(calendar.getCalendarId())
                 .id(calendarContentId)
                 .start(sdate)
                 .color(calendar.getColor())
+                .location(location)
+                .importance(importance)
+                .memo(memo)
+                .alert(alertStatus)
                 .end(edate)
                 .build();
     }
@@ -84,5 +90,17 @@ public class CalendarContent {
 
     public void patchStatus(int i) {
         this.status = i;
+    }
+
+    public void putContent(PutCalendarContentDto dto,Calendar calendar) {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        this.name = dto.getTitle();
+        this.calendar = calendar;
+        this.alertStatus = dto.getAlert();
+        this.importance = dto.getImportance();
+        this.memo = dto.getMemo();
+        this.location = dto.getLocation();
+        this.calendarStartDate = LocalDateTime.parse(dto.getSdate(), formatter);
+        this.calendarEndDate = LocalDateTime.parse(dto.getEdate(), formatter);
     }
 }
