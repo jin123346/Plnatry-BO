@@ -1,6 +1,7 @@
 package com.backend.service;
 
 import com.backend.dto.request.calendar.PostCalendarContentDto;
+import com.backend.dto.request.calendar.PostCalendarDto;
 import com.backend.dto.request.calendar.PutCalendarContentDto;
 import com.backend.dto.request.calendar.PutCalendarContentsDto;
 import com.backend.dto.response.calendar.GetCalendarContentNameDto;
@@ -267,6 +268,8 @@ public class CalendarService {
             contents.addAll(smallContents);  // 필터링된 결과를 contents에 추가
         }
         List<GetCalendarContentNameDto> dtos = contents.stream().map(CalendarContent::toGetCalendarContentNameDto).toList();
+        System.out.println("=====================----");
+        System.out.println(dtos);
         return ResponseEntity.ok(dtos);
     }
 
@@ -298,5 +301,47 @@ public class CalendarService {
         map.put("message","일정이 수정되었습니다.");
         map.put("color",color);
         return ResponseEntity.ok().body(map);
+    }
+
+    public ResponseEntity<?> postCalendar(PostCalendarDto dto) {
+        Long myId = 9L;
+        if(dto.getStatus()==1){
+            Optional<User> user = userRepository.findById(myId);
+            if(user.isEmpty()){
+                return ResponseEntity.badRequest().body("로그인 정보가 일치하지않습니다...");
+            }
+            Optional<CalendarMapper> mapper = calendarMapperRepository.findByUserAndCalendar_Status(user.get(),1);
+            mapper.ifPresent(calendarMapper -> calendarMapper.getCalendar().patchStatus(2));
+        }
+        Calendar calendar = Calendar.builder()
+                .name(dto.getName())
+                .color(dto.getColor())
+                .status(dto.getStatus())
+                .build();
+
+        calendarRepository.save(calendar);
+
+        List<Long> userIds = dto.getUserIds();
+        userIds.add(myId);
+        List<CalendarMapper> mappers = new ArrayList<>();
+        for (Long userId : userIds) {
+            Optional<User> user = userRepository.findById(userId);
+            if(user.isEmpty()){
+                return ResponseEntity.badRequest().body("공유멤버의 회원정보가 일치하지않습니다...");
+            }
+            CalendarMapper mapper = CalendarMapper.builder()
+                    .user(user.get())
+                    .calendar(calendar)
+                    .build();
+            mappers.add(mapper);
+        }
+
+        calendarMapperRepository.saveAll(mappers);
+
+        GetCalendarNameDto nameDto = calendar.toGetCalendarNameDto();
+        Map<String, Object> map = new HashMap<>();
+        map.put("message","캘린더 등록이 완료되었습니다.");
+        map.put("calendarName",nameDto);
+        return ResponseEntity.ok(map);
     }
 }

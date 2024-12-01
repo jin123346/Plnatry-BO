@@ -1,6 +1,7 @@
 package com.backend.controller;
 
 import com.backend.dto.request.calendar.PostCalendarContentDto;
+import com.backend.dto.request.calendar.PostCalendarDto;
 import com.backend.dto.request.calendar.PutCalendarContentDto;
 import com.backend.dto.request.calendar.PutCalendarContentsDto;
 import com.backend.service.CalendarService;
@@ -74,7 +75,6 @@ public class CalendarController {
     public ResponseEntity<?> putCalendarContents (
             @RequestBody List<PutCalendarContentsDto> dtos
     ){
-        System.out.println(dtos.get(0).getStartDate());
         ResponseEntity<?> response = calendarService.putCalendarContents(dtos);
         return response;
     }
@@ -92,6 +92,15 @@ public class CalendarController {
         @RequestParam Long id
     ){
         ResponseEntity<?> response = calendarService.deleteCalendarContent(id);
+        return response;
+    }
+
+    @PostMapping("/calendar")
+    public ResponseEntity<?> postCalendar (
+            @RequestBody PostCalendarDto dto
+            ){
+
+        ResponseEntity<?> response = calendarService.postCalendar(dto);
         return response;
     }
 }

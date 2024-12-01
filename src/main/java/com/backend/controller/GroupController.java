@@ -2,10 +2,13 @@ package com.backend.controller;
 
 import com.backend.dto.request.PostDepartmentReqDto;
 import com.backend.dto.response.GetAdminUsersRespDto;
+import com.backend.dto.response.group.GetGroupsAllDto;
+import com.backend.dto.response.user.GetUsersAllDto;
 import com.backend.service.GroupService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.apache.coyote.Response;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -115,5 +118,26 @@ public class GroupController {
         return response;
     }
 
+    @GetMapping("/groups/all")
+    public ResponseEntity<?> getAllGroups(
+            @RequestParam int page,
+            @RequestParam(value = "keyword",defaultValue = "") String keyword,
+            @RequestParam(value = "id", defaultValue = "0") Long id
+    ) {
+        Map<String, Object> map = new HashMap<>();
+        Page<GetGroupsAllDto> dtos;
+        if(!keyword.equals("")&&id==0){
+            dtos = groupService.getGroupsAllByKeyword(page,keyword);
+        } else {
+            dtos = groupService.getGroupsAll(page);
+        }
 
+        map.put("groups", dtos.getContent());
+        map.put("totalPages", dtos.getTotalPages());
+        map.put("totalElements", dtos.getTotalElements());
+        map.put("currentPage", dtos.getNumber());
+        map.put("hasNextPage", dtos.hasNext());
+
+        return ResponseEntity.ok().body(map);
+    }
 }

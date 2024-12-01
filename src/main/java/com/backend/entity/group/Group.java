@@ -1,9 +1,12 @@
 package com.backend.entity.group;
 
 import com.backend.dto.response.GetAdminSidebarGroupsRespDto;
+import com.backend.dto.response.group.GetGroupsAllDto;
+import com.backend.dto.response.user.GetUsersAllDto;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -47,5 +50,25 @@ public class Group {
 
     public void patchGroupName(String update) {
         this.name = update;
+    }
+
+    public GetGroupsAllDto toGetGroupsAllDto() {
+        Long cnt;
+        if(groupMappers.size()==0){
+            cnt = 0L;
+        } else {
+            cnt = (long)groupMappers.size();
+        }
+//        List<GetUsersAllDto> dtos = new ArrayList<>();
+//        for (GroupMapper groupMapper : groupMappers) {
+//            GetUsersAllDto dto = groupMapper.getUser().toGetUsersAllDto();
+//            dtos.add(dto);
+//        }
+        return GetGroupsAllDto.builder()
+                .id(id)
+                .name(name)
+                .cnt(cnt)
+//                .users(dtos)
+                .build();
     }
 }

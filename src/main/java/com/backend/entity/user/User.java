@@ -5,6 +5,7 @@ import com.backend.dto.response.GetAdminUsersApprovalRespDto;
 import com.backend.dto.response.GetAdminUsersDtailRespDto;
 import com.backend.dto.response.GetAdminUsersRespDto;
 import com.backend.dto.response.UserDto;
+import com.backend.dto.response.user.GetUsersAllDto;
 import com.backend.entity.calendar.CalendarMapper;
 import com.backend.entity.group.GroupMapper;
 import com.backend.util.Role;
@@ -229,6 +230,86 @@ public class User {
                 .company(this.company)
                 .profileImg(sname)
                 .createAt(this.createAt)
+                .build();
+    }
+
+    public GetUsersAllDto toGetUsersAllDto (){
+        String levelString;
+        switch (level) {
+            case 1:
+                levelString = "사원";
+                break;
+            case 2:
+                levelString = "주임";
+                break;
+            case 3:
+                levelString = "대리";
+                break;
+            case 4:
+                levelString = "과장";
+                break;
+            case 5:
+                levelString = "차장";
+                break;
+            case 6:
+                levelString = "부장";
+                break;
+            default:
+                levelString = "외주";  // Handle unexpected levels
+                break;
+        }
+        String group;
+        if(!groupMappers.isEmpty()){
+            group = groupMappers.get(0).getGroup().getName();
+        } else {
+            group = "소속없음";
+        }
+        
+        return GetUsersAllDto.builder()
+                .name(this.name)
+                .email(this.email)
+                .authority("아직빈칸")
+                .group(group)
+                .uid(this.uid)
+                .id(this.id)
+                .level(levelString)
+                .build();
+    }
+
+    public GetUsersAllDto toGetUsersAllDto (String group){
+        String levelString;
+        switch (level) {
+            case 1:
+                levelString = "사원";
+                break;
+            case 2:
+                levelString = "주임";
+                break;
+            case 3:
+                levelString = "대리";
+                break;
+            case 4:
+                levelString = "과장";
+                break;
+            case 5:
+                levelString = "차장";
+                break;
+            case 6:
+                levelString = "부장";
+                break;
+            default:
+                levelString = "외주";  // Handle unexpected levels
+                break;
+        }
+
+        return GetUsersAllDto.builder()
+                .name(this.name)
+                .email(this.email)
+                .authority("아직빈칸")
+                .group(group)
+                .uid(this.uid)
+                .id(this.id)
+                .level(levelString)
                 .build();
     }
 }
