@@ -27,14 +27,14 @@ public class Folder {
     private String path; // 폴더 경로
     private String name; // 폴더 이름
     private String ownerId;
-    private Integer order; // 폴더 순서 (같은 부모 폴더 내에서의 정렬)
+    private Double order; // 폴더 순서 (같은 부모 폴더 내에서의 정렬)
     private String description; // 폴더 설명
     @CreationTimestamp
     private LocalDateTime createdAt; // 폴더 생성 날짜 및 시간
     @LastModifiedDate
     private LocalDateTime updatedAt; // 폴더 수정 날짜 및 시간
     private List<Folder> children = new ArrayList<>(); // 하위 폴더 목록
-    private List<File> files = new ArrayList<>(); // 폴더 내 파일 목록
+    private List<FileMogo> files = new ArrayList<>(); // 폴더 내 파일 목록
     @Builder.Default
     private int isShared =0 ; // 공유 여부  0: 나만사용, 2: 선택한 구성원 3: 전체구성원
     @Builder.Default
@@ -63,7 +63,9 @@ public class Folder {
                 .build();
     }
 
-    public void newFileName(String newFileName){
-        this.name = newFileName;
+    public void newFolderName(String newfolderName){
+        this.name = newfolderName;
     }
+
+    public void moveOrder(double newOrder){this.order = newOrder;}
 }
