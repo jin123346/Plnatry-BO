@@ -5,6 +5,8 @@ import com.backend.dto.response.GetAdminSidebarGroupsRespDto;
 import com.backend.dto.response.GetAdminUsersApprovalRespDto;
 import com.backend.dto.response.GetAdminUsersDtailRespDto;
 import com.backend.dto.response.GetAdminUsersRespDto;
+import com.backend.dto.response.group.GetGroupsAllDto;
+import com.backend.dto.response.user.GetUsersAllDto;
 import com.backend.entity.group.GroupLeader;
 import com.backend.entity.group.Group;
 import com.backend.entity.group.GroupMapper;
@@ -16,6 +18,9 @@ import com.backend.repository.GroupRepository;
 import com.backend.repository.UserRepository;
 import com.backend.util.Role;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -300,4 +305,19 @@ public class GroupService {
         List<GetAdminUsersDtailRespDto> dtos = users.stream().map(User::toGetAdminUsersDtailRespDto).toList();
         return ResponseEntity.ok(dtos);
     }
+
+    public Page<GetGroupsAllDto> getGroupsAll(int page) {
+        Pageable pageable = PageRequest.of(page,5);
+        Page<Group> groups = groupRepository.findAllByCompanyAndStatusIsNot("1246857",0,pageable);
+        Page<GetGroupsAllDto> dtos = groups.map(Group::toGetGroupsAllDto);
+        return dtos;
+    }
+
+    public Page<GetGroupsAllDto> getGroupsAllByKeyword(int page, String keyword) {
+        Pageable pageable = PageRequest.of(page,5);
+        Page<Group> groups = groupRepository.findAllByCompanyAndNameContainingAndStatusIsNot("1246857",keyword,0,pageable);
+        Page<GetGroupsAllDto> dtos = groups.map(Group::toGetGroupsAllDto);
+        return dtos;
+    }
+
 }

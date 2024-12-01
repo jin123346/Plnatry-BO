@@ -48,4 +48,7 @@ public class Calendar {
                 .build();
     }
 
+    public void patchStatus(int i) {
+        this.status = i;
+    }
 }

@@ -42,4 +42,5 @@ public class CalendarMapper {
 
     @CreationTimestamp
     private LocalDateTime createdAt; // 권한 생성 날짜 및 시간
+
 }
