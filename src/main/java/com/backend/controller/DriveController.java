@@ -9,10 +9,7 @@ import com.backend.dto.response.drive.FolderDto;
 import com.backend.entity.folder.File;
 import com.backend.entity.folder.Folder;
 import com.backend.entity.user.User;
-import com.backend.service.FolderService;
-import com.backend.service.PermissionService;
-import com.backend.service.SftpService;
-import com.backend.service.UserService;
+import com.backend.service.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.http.HttpStatus;
@@ -37,6 +34,7 @@ public class DriveController {
     private final UserService userService;
     private final PermissionService permissionService;
     private final SftpService sftpService;
+    private final ThumbnailService thumbnailService;
 
     @PostMapping("/newDrive")
     public void createDrive(@RequestBody NewDriveRequest newDriveRequest) {
@@ -108,10 +106,24 @@ public class DriveController {
     @GetMapping("/folder-contents")
     public ResponseEntity<Map<String, Object>> getFolderContents(@RequestParam String folderId,@RequestParam String ownerId){
         Map<String,Object> response = new HashMap<>();
+        //폴더 가져오기
         List<FolderDto> subFolders = folderService.getSubFolders(ownerId,folderId);
+
+        //파일 가져오기
+        List<FileRequestDto> files = folderService.getFiles(folderId);
+
+        files.forEach(file -> {
+            String remoteFilePath = file.getPath(); // SFTP 상의 원격 경로
+            String thumbnailPath = thumbnailService.generateThumbnailIfNotExists(remoteFilePath, file.getSavedName());
+            file.setThumbnailPath(thumbnailPath); // 썸네일 경로 설정
+        });
+
+
+        response.put("files",files);
         response.put("subFolders", subFolders);
 
         log.info("subFolders:"+subFolders);
+        log.info("files:"+files);
 
 
         return ResponseEntity.ok().body(response);

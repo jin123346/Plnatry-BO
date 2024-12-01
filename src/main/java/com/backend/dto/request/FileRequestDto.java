@@ -33,7 +33,7 @@ public class FileRequestDto {
     private LocalDateTime createdAt; // 파일 생성 날짜 및 시간
     private LocalDateTime updatedAt; // 파일 수정 날짜 및 시간
 
-
+    private String thumbnailPath;
     public FileMogo toEntity(){
         FileMogo fileMogo = FileMogo.builder()
                 .file_order(file_order)
@@ -53,7 +53,7 @@ public class FileRequestDto {
         return fileMogo;
     }
 
-    public FileRequestDto toDto(FileMogo fileMogo){
+    public static FileRequestDto toDto(FileMogo fileMogo){
         FileRequestDto fileRequestDto = FileRequestDto.builder()
                 .id(fileMogo.getId())
                 .folderId(fileMogo.getFolderId())

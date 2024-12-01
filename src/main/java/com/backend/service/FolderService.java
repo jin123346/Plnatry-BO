@@ -143,6 +143,13 @@ public class FolderService {
         return folders.stream().map(Folder::toDTO).collect(Collectors.toList());
     }
 
+    public List<FileRequestDto> getFiles(String folderId){
+        List<FileMogo> files =fileMogoRepository.findByFolderId(folderId);
+        return files.stream()
+                .map(FileRequestDto::toDto)
+                .collect(Collectors.toList());
+    }
+
     public FolderDto getParentFolder(String folderId){
         Optional<Folder> opt = folderMogoRepository.findById(folderId);
         if(opt.isPresent()){

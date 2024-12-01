@@ -254,6 +254,46 @@ public class SftpService {
         }
     }
 
+
+
+
+    public boolean thumbnailFileUploads(String localFilePath,  String remoteFileName) {
+
+       String remoteDir = BASE_SFTP_DIR+"thumbnails";
+
+        try {
+            // SFTP 연결 설정
+            JSch jsch = new JSch();
+            Session session = jsch.getSession(SFTP_USER, SFTP_HOST, SFTP_PORT);
+            session.setPassword(SFTP_PASSWORD);
+            session.setConfig("StrictHostKeyChecking", "no");
+            session.connect();
+
+            ChannelSftp channelSftp = (ChannelSftp) session.openChannel("sftp");
+            channelSftp.connect();
+
+            // 원격 디렉토리가 없는 경우 생성
+            try {
+                channelSftp.cd(remoteDir);
+            } catch (SftpException e) {
+                log.info("Remote directory does not exist. Creating directory: {}", remoteDir);
+                channelSftp.cd(remoteDir);
+            }
+
+            // 파일 업로드
+            channelSftp.put(localFilePath, remoteFileName);
+            log.info("File uploaded successfully: {}/{}", remoteDir, remoteFileName);
+
+            // 연결 종료
+            channelSftp.disconnect();
+            session.disconnect();
+            return true;
+        } catch (JSchException | SftpException e) {
+            log.error("File upload failed: {}", e.getMessage());
+            return false;
+        }
+    }
+
     public boolean downloadFile(String remoteDir, String remoteFileName, String localFilePath) {
         try {
             // SFTP 연결 설정
@@ -268,7 +308,7 @@ public class SftpService {
 
             // 파일 다운로드
             String remoteFilePath = remoteDir + "/" + remoteFileName;
-            channelSftp.get(remoteFilePath, localFilePath);
+            channelSftp.get(remoteDir, localFilePath);
             log.info("File downloaded successfully: {} -> {}", remoteFilePath, localFilePath);
 
             // 연결 종료
