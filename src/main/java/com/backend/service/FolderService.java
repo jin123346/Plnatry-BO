@@ -1,13 +1,14 @@
 package com.backend.service;
 
 
+import com.backend.dto.request.FileRequestDto;
 import com.backend.dto.request.drive.MoveFolderRequest;
 import com.backend.dto.request.drive.NewDriveRequest;
 import com.backend.dto.response.drive.FolderDto;
+import com.backend.entity.folder.FileMogo;
 import com.backend.entity.folder.Folder;
-import com.backend.entity.folder.Permission;
-import com.backend.entity.user.User;
-import com.backend.repository.FolderMogoRepository;
+import com.backend.repository.drive.FileMogoRepository;
+import com.backend.repository.drive.FolderMogoRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Value;
@@ -16,12 +17,14 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
+import java.io.IOException;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -33,49 +36,12 @@ public class FolderService {
     private final SftpService sftpService;
     private final UserService userService;
     private final FolderMogoRepository folderMogoRepository;
+    private final FileMogoRepository fileMogoRepository;
     private String fileServerUrl = "http://43.202.45.49:90/local/upload/create-folder";
 
 
     @Value("${spring.servlet.multipart.location}")
     private String uploadPath;
-
-    public void makeDir(String folderName){
-
-        RestTemplate restTemplate = new RestTemplate();
-        String apiUrl = fileServerUrl;
-
-        // 요청 헤더와 바디 설정
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("Content-Type", "application/json");
-
-        String requestBody = "{\"folderName\":\"" + folderName + "\"}";
-
-        HttpEntity<String> request = new HttpEntity<>(requestBody, headers);
-
-        // API 호출
-        ResponseEntity<String> response = restTemplate.postForEntity(apiUrl, request, String.class);
-
-        if (response.getStatusCode().is2xxSuccessful()) {
-            File folder = new File(BASE_UPLOAD_DIR+folderName);
-
-            if (!folder.exists()) {
-                if (folder.mkdirs()) {
-                    System.out.println("Folder created successfully"+ folderName);
-
-                } else {
-                    System.out.println("Failed to create folder"+ folderName);
-
-
-                }
-            } else {
-                System.out.println("Folder already exists"+ folderName);
-
-            }
-            System.out.println("폴더 생성 성공: " + folderName);
-        } else {
-            System.err.println("폴더 생성 실패: " + response.getStatusCode());
-        }
-    }
 
 
     public String createDrive(NewDriveRequest request){
@@ -192,7 +158,7 @@ public class FolderService {
         FolderDto result = null;
         if(opt.isPresent()){
             Folder folder = opt.get();
-            folder.newFileName(newName);
+            folder.newFolderName(newName);
             Folder savedFolder= folderMogoRepository.save(folder);
             result = savedFolder.toDTO();
         }
@@ -213,6 +179,95 @@ public class FolderService {
         Folder changedFolder =folderMogoRepository.save(folder);
 
         return changedFolder.getOrder();
+    }
+
+
+
+    public void uploadFiles(List<MultipartFile> files , String folderId,double maxOrder,String uid){
+
+         Optional<Folder> opt = folderMogoRepository.findById(folderId);
+
+         String remoteDir = null;
+         double savedOrder = 0;
+         int isShared = 0;
+         int isPinned = 0;
+         if(opt.isPresent()){
+             Folder folder = opt.get();
+             remoteDir = folder.getPath();
+             isShared = folder.getIsShared();
+             isPinned = folder.getIsPinned();
+         }
+        for(MultipartFile file : files){
+
+            String originalFilename = file.getOriginalFilename();
+            String savedFilename= generateSavedName(originalFilename);
+            String path = remoteDir+"/"+savedFilename;
+
+            savedOrder = maxOrder == 0 ? 0 : maxOrder+100.0;
+
+            FileRequestDto filedto= FileRequestDto.builder()
+                    .folderId(folderId)
+                    .savedName(savedFilename)
+                    .originalName(originalFilename)
+                    .path(path)
+                    .file_order(savedOrder)
+                    .isPinned(isPinned)
+                    .isShared(isShared)
+                    .owner_uid(uid)
+                    .createdAt(LocalDateTime.now())
+                    .updatedAt(LocalDateTime.now())
+                    .size(file.getSize())
+                    .build();
+
+            FileMogo saved = filedto.toEntity();
+
+            // 임시 파일 생성
+            File tempFile = null;
+            try {
+                tempFile = File.createTempFile("upload_", "_" + originalFilename);
+                file.transferTo(tempFile); // MultipartFile 데이터를 임시 파일로 저장
+
+                // SFTP 업로드
+                sftpService.uploadFile(tempFile.getAbsolutePath(), remoteDir, savedFilename);
+
+                // 업로드된 파일 정보 저장
+                fileMogoRepository.save(saved);
+            } catch ( IOException e) {
+                log.error("임시 파일 생성 또는 전송 중 오류 발생: {}", e.getMessage());
+            } finally {
+                if (tempFile != null && tempFile.exists()) {
+                    tempFile.delete(); // 임시 파일 삭제
+                }
+            }
+           FileMogo savedFile =  fileMogoRepository.save(saved);
+
+
+        }
+
+
+
+    }
+
+
+
+
+
+    public String generateSavedName(String originalName) {
+        // Validate input
+        if (originalName == null || originalName.isEmpty()) {
+            throw new IllegalArgumentException("Original file name cannot be null or empty");
+        }
+
+        // Extract file extension
+        String extension = "";
+        int dotIndex = originalName.lastIndexOf(".");
+        if (dotIndex > 0 && dotIndex < originalName.length() - 1) {
+            extension = originalName.substring(dotIndex);
+        }
+
+        // Generate UUID and append extension
+        String uuid = UUID.randomUUID().toString();
+        return uuid + extension;
     }
 
 

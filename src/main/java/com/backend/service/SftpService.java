@@ -1,15 +1,13 @@
 package com.backend.service;
 
 
-import com.backend.dto.request.drive.NewDriveRequest;
-import com.backend.repository.FolderMogoRepository;
 import com.jcraft.jsch.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.io.File;
+import java.util.Vector;
 
 @Log4j2
 @Service
@@ -85,47 +83,9 @@ public class SftpService {
         }
     }
 
-    public void uploadFile(String username, String localFilePath, String remoteFilePath) throws JSchException, SftpException {
-        JSch jsch = new JSch();
-        Session session = jsch.getSession(SFTP_USER, SFTP_HOST, SFTP_PORT);
-        session.setPassword(SFTP_PASSWORD);
 
-        session.setConfig("StrictHostKeyChecking", "no");
-        session.connect();
 
-        ChannelSftp channelSftp = (ChannelSftp) session.openChannel("sftp");
-        channelSftp.connect();
 
-        // 사용자별 경로 설정
-        String remoteDir = "/data/sftp/uploads/" + username + "/";
-        channelSftp.put(localFilePath, remoteDir + remoteFilePath);
-
-        channelSftp.disconnect();
-        session.disconnect();
-
-        System.out.println("File uploaded successfully to " + remoteDir + remoteFilePath);
-    }
-
-    public void downloadFile(String username, String remoteFilePath, String localFilePath) throws JSchException, SftpException {
-        JSch jsch = new JSch();
-        Session session = jsch.getSession(SFTP_USER, SFTP_HOST, SFTP_PORT);
-        session.setPassword(SFTP_PASSWORD);
-
-        session.setConfig("StrictHostKeyChecking", "no");
-        session.connect();
-
-        ChannelSftp channelSftp = (ChannelSftp) session.openChannel("sftp");
-        channelSftp.connect();
-
-        // 사용자별 경로 설정
-        String remoteDir = "/data/sftp/uploads/" + username + "/";
-        channelSftp.get(remoteDir + remoteFilePath, localFilePath);
-
-        channelSftp.disconnect();
-        session.disconnect();
-
-        System.out.println("File downloaded successfully from " + remoteDir + remoteFilePath);
-    }
 
     public String createFolder(String folderName,String username) {
 
@@ -258,6 +218,101 @@ public class SftpService {
         }
 
     }
+
+
+    public boolean uploadFile(String localFilePath, String remoteDir, String remoteFileName) {
+        try {
+            // SFTP 연결 설정
+            JSch jsch = new JSch();
+            Session session = jsch.getSession(SFTP_USER, SFTP_HOST, SFTP_PORT);
+            session.setPassword(SFTP_PASSWORD);
+            session.setConfig("StrictHostKeyChecking", "no");
+            session.connect();
+
+            ChannelSftp channelSftp = (ChannelSftp) session.openChannel("sftp");
+            channelSftp.connect();
+
+            // 원격 디렉토리가 없는 경우 생성
+            try {
+                channelSftp.cd(remoteDir);
+            } catch (SftpException e) {
+                log.info("Remote directory does not exist. Creating directory: {}", remoteDir);
+                channelSftp.cd(remoteDir);
+            }
+
+            // 파일 업로드
+            channelSftp.put(localFilePath, remoteFileName);
+            log.info("File uploaded successfully: {}/{}", remoteDir, remoteFileName);
+
+            // 연결 종료
+            channelSftp.disconnect();
+            session.disconnect();
+            return true;
+        } catch (JSchException | SftpException e) {
+            log.error("File upload failed: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    public boolean downloadFile(String remoteDir, String remoteFileName, String localFilePath) {
+        try {
+            // SFTP 연결 설정
+            JSch jsch = new JSch();
+            Session session = jsch.getSession(SFTP_USER, SFTP_HOST, SFTP_PORT);
+            session.setPassword(SFTP_PASSWORD);
+            session.setConfig("StrictHostKeyChecking", "no");
+            session.connect();
+
+            ChannelSftp channelSftp = (ChannelSftp) session.openChannel("sftp");
+            channelSftp.connect();
+
+            // 파일 다운로드
+            String remoteFilePath = remoteDir + "/" + remoteFileName;
+            channelSftp.get(remoteFilePath, localFilePath);
+            log.info("File downloaded successfully: {} -> {}", remoteFilePath, localFilePath);
+
+            // 연결 종료
+            channelSftp.disconnect();
+            session.disconnect();
+            return true;
+        } catch (JSchException | SftpException e) {
+            log.error("File download failed: {}", e.getMessage());
+            return false;
+        }
+    }
+
+
+    private long calculateSizeRecursive(ChannelSftp channelSftp, String username) throws SftpException {
+        long totalSize = 0;
+
+        String path = BASE_SFTP_DIR+username;
+        Vector<ChannelSftp.LsEntry> entries = channelSftp.ls(path);
+
+        for (ChannelSftp.LsEntry entry : entries) {
+            String fileName = entry.getFilename();
+
+            // 현재 디렉토리와 상위 디렉토리 제외
+            if (".".equals(fileName) || "..".equals(fileName)) {
+                continue;
+            }
+
+
+
+
+
+            if (entry.getAttrs().isDir()) {
+                // 디렉토리인 경우 재귀적으로 크기 계산
+                totalSize += calculateSizeRecursive(channelSftp, path + "/" + fileName);
+            } else {
+                // 파일 크기 합산
+                totalSize += entry.getAttrs().getSize();
+            }
+        }
+
+        return totalSize;
+
+    }
+
 
 
 

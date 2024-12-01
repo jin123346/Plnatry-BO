@@ -12,6 +12,7 @@ public class MoveFolderRequest {
     private String folderId;
     private String targetFolderId;
     private double order;
+    private double currentOrder;
 
 
 

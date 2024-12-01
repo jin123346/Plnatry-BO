@@ -1,6 +1,7 @@
 package com.backend.controller;
 
 
+import com.backend.dto.request.FileRequestDto;
 import com.backend.dto.request.drive.MoveFolderRequest;
 import com.backend.dto.request.drive.NewDriveRequest;
 import com.backend.dto.response.UserDto;
@@ -18,6 +19,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.HashMap;
 import java.util.List;
@@ -141,6 +143,24 @@ public class DriveController {
         }
 
 
+    }
+
+
+
+    // 파일 업로드 처리
+    @PostMapping("/upload/{folderId}")
+    public ResponseEntity<?> uploadFiles( @PathVariable String folderId,
+                                          @RequestParam("file") List<MultipartFile> files,
+                                          @RequestParam("maxOrder") double maxOrder,
+                                          @RequestParam("uid") String uid
+    )  {
+
+        log.info("Upload files"+files);
+        log.info("folderId:"+folderId);
+
+        folderService.uploadFiles(files,folderId,maxOrder,uid);
+
+        return null;
     }
 
 
