@@ -23,7 +23,7 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/auth")
-@CrossOrigin(origins = "http://localhost:8010")
+@CrossOrigin(origins = "http://localhost:8010", allowCredentials = "true")
 @RequiredArgsConstructor
 @Log4j2
 public class AuthController {
@@ -31,6 +31,11 @@ public class AuthController {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final RedisTemplate redisTemplate;
+
+    @GetMapping("/test")
+    public ResponseEntity<?> testapi (){
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+    }
 
     //2024/11/29 박연화 토큰 발급 수정
     @PostMapping("/login")
@@ -58,7 +63,7 @@ public class AuthController {
             cookie.setMaxAge(60*60*24*7);
             resp.addCookie(cookie);
 
-            //리프레시토큰 redis 저장
+            //리프레시토큰 redis 저장 할까말까
 //            storeRefreshTokenInRedis(refreshToken, userDto.getUid(), userDto.getRole().toString(), Duration.ofDays(7).toMillis());
 
 
@@ -100,27 +105,31 @@ public class AuthController {
         return ResponseEntity.ok("Logged out successfully");
     }
 
-//    @PostMapping("/refresh")
-//    public ResponseEntity<?> refreshAccessToken(@CookieValue(name = "refreshToken", required = false) String refreshToken) {
-//        if (refreshToken == null) {
-//            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("No refresh token provided");
-//        }
-//        // 리프레시 토큰 검증 및 처리
-//        try {
-//            // 1. 리프레시 토큰 검증
-//            Claims claims = tokenProvider.getClaims(refreshToken);
-//            if (claims == null || tokenProvider.isTokenExpired(refreshToken)) {
-//                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid or expired refresh token");
-//            }
-//
-//            // 2. 새로운 액세스 토큰 생성
-//            String username = claims.getSubject(); // 사용자 ID 가져오기
-//            String newAccessToken = tokenProvider.createToken(username, "USER_ROLE", "access");
-//
-//            // 3. 응답 반환
-//            return ResponseEntity.ok(Map.of("accessToken", newAccessToken));
-//        } catch (Exception e) {
-//            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid refresh token");
-//        }
-//    }
+    @PostMapping("/refresh")
+    public ResponseEntity<?> refreshAccessToken(@CookieValue(name = "refresh_token", required = false) String refreshToken) {
+
+        log.info("리프레시 액세스토큰 컨트롤러 접속... " + refreshToken);
+        if (refreshToken == null) {
+            log.info("리프레시 토큰 널");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("No refresh token provided");
+        }
+        try {
+            Claims claims = tokenProvider.getClaims(refreshToken);
+            log.info("클레임 : "+claims);
+            if (claims == null || tokenProvider.isTokenExpired(refreshToken)) {
+                log.info("여긴가?1");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid or expired refresh token");
+            }
+
+            // 새 액세스 토큰 생성
+            String username = claims.getSubject();
+            String role = claims.get("role", String.class);
+            String newAccessToken = tokenProvider.createToken(username, role, "access");
+                log.info("여긴가?2"+newAccessToken);
+
+            return ResponseEntity.ok(Map.of("accessToken", newAccessToken));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid refresh token");
+        }
+    }
 }

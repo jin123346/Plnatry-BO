@@ -27,7 +27,7 @@ public class FileRequestDto {
     private Long size; // 파일 크기 (바이트 단위)
     private String owner_uid; // 파일을 업로드한 사용자
     private Integer version = 1; // 파일 버전 (업데이트 시 증가)
-    private Status status; // 파일 삭제 여부 (논리적 삭제)
+    private int status; // 파일 삭제 여부 (논리적 삭제)
     private int isShared;
     private int isPinned; // 1: 고정 폴더
     private LocalDateTime createdAt; // 파일 생성 날짜 및 시간

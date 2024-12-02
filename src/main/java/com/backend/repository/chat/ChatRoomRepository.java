@@ -1,10 +1,9 @@
 package com.backend.repository.chat;
 
-import com.backend.entity.message.ChatRoom;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.repository.CrudRepository;
+import com.backend.document.chat.ChatRoomDocument;
+import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
+public interface ChatRoomRepository extends MongoRepository<ChatRoomDocument, Long> {
 }

@@ -4,6 +4,7 @@ package com.backend.service;
 import com.backend.dto.request.FileRequestDto;
 import com.backend.dto.request.drive.MoveFolderRequest;
 import com.backend.dto.request.drive.NewDriveRequest;
+import com.backend.dto.request.drive.RenameRequest;
 import com.backend.dto.response.drive.FolderDto;
 import com.backend.entity.folder.FileMogo;
 import com.backend.entity.folder.Folder;
@@ -12,13 +13,17 @@ import com.backend.repository.drive.FolderMogoRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
-
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
 import java.io.File;
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -37,6 +42,8 @@ public class FolderService {
     private final UserService userService;
     private final FolderMogoRepository folderMogoRepository;
     private final FileMogoRepository fileMogoRepository;
+    private final ThumbnailService thumbnailService;
+    private final MongoTemplate mongoTemplate;
     private String fileServerUrl = "http://43.202.45.49:90/local/upload/create-folder";
 
 
@@ -113,7 +120,7 @@ public class FolderService {
 
 
     public List<FolderDto> getFoldersByUid(String uid,String parentId){
-        List<Folder> folders = folderMogoRepository.findByOwnerIdAndAndParentIdOrderByOrder(uid,parentId);
+        List<Folder> folders = folderMogoRepository.findByOwnerIdAndParentIdOrderByOrder(uid,parentId);
             List<FolderDto> folderDtos = folders.stream().map(folder -> {
                 FolderDto folderDto = FolderDto.builder()
                         .id(folder.getId())
@@ -137,7 +144,7 @@ public class FolderService {
 
 
     public List<FolderDto> getSubFolders(String ownerId, String folderId){
-        List<Folder> folders =folderMogoRepository.findByOwnerIdAndAndParentIdOrderByOrder(ownerId,folderId);
+        List<Folder> folders =folderMogoRepository.findByOwnerIdAndParentIdOrderByOrder(ownerId,folderId);
 
 
         return folders.stream().map(Folder::toDTO).collect(Collectors.toList());
@@ -224,6 +231,7 @@ public class FolderService {
                     .createdAt(LocalDateTime.now())
                     .updatedAt(LocalDateTime.now())
                     .size(file.getSize())
+                    .status(0)
                     .build();
 
             FileMogo saved = filedto.toEntity();
@@ -235,7 +243,9 @@ public class FolderService {
                 file.transferTo(tempFile); // MultipartFile 데이터를 임시 파일로 저장
 
                 // SFTP 업로드
-                sftpService.uploadFile(tempFile.getAbsolutePath(), remoteDir, savedFilename);
+               String remoteFilePath =  sftpService.uploadFile(tempFile.getAbsolutePath(), remoteDir, savedFilename);
+               String thumbnailPath = thumbnailService.generateThumbnailIfNotExists(remoteFilePath,savedFilename);
+
 
                 // 업로드된 파일 정보 저장
                 fileMogoRepository.save(saved);
@@ -259,6 +269,8 @@ public class FolderService {
 
 
 
+
+
     public String generateSavedName(String originalName) {
         // Validate input
         if (originalName == null || originalName.isEmpty()) {
@@ -275,6 +287,67 @@ public class FolderService {
         // Generate UUID and append extension
         String uuid = UUID.randomUUID().toString();
         return uuid + extension;
+    }
+
+
+    public void reNameFolder(RenameRequest renameRequest) {
+        Folder folder = folderMogoRepository.findById(renameRequest.getId()).orElseThrow();
+        String currentPath = folder.getPath();
+        boolean renameFolder = sftpService.renameFolder(currentPath, renameRequest.getNewPath());
+
+        if(renameFolder){
+            Query query = new Query(Criteria.where("_id").is(renameRequest.getId()));
+            Update update = new Update()
+                    .set("name", renameRequest.getNewName())
+                    .set("path", renameRequest.getNewPath());
+            mongoTemplate.upsert(query, update, Folder.class);
+        }
+
+    }
+
+    public void reNameFile(String id, String newName){
+
+
+        Query query = new Query(Criteria.where("_id").is(id));
+        Update update = new Update().set("name", newName);
+
+        mongoTemplate.upsert(query, update, FileMogo.class);
+
+    }
+
+    public boolean goToTrash(String id, String type){
+        if(type.equals("folder")){
+            Query query = new Query(Criteria.where("_id").is(id));
+            Update update = new Update().set("status", 1);
+
+            mongoTemplate.upsert(query, update, Folder.class);
+            return true;
+        }else if(type.equals("file")){
+            Query query = new Query(Criteria.where("_id").is(id));
+            Update update = new Update().set("status", 1);
+
+            mongoTemplate.upsert(query, update, FileMogo.class);
+            return true;
+        }
+        return false;
+    }
+
+    //진짜 삭제
+    @Transactional
+    public boolean deleteFolder(String id,String path,String type) {
+
+        boolean result = sftpService.delete(path);
+        if(result){
+            if(type.equals("folder")){
+                folderMogoRepository.deleteById(id);
+                return true;
+            }else if(type.equals("file")){
+                fileMogoRepository.deleteById(id);
+                return true;
+            }
+
+        }
+        return false;
     }
 
 

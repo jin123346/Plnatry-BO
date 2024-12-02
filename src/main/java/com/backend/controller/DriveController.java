@@ -4,6 +4,7 @@ package com.backend.controller;
 import com.backend.dto.request.FileRequestDto;
 import com.backend.dto.request.drive.MoveFolderRequest;
 import com.backend.dto.request.drive.NewDriveRequest;
+import com.backend.dto.request.drive.RenameRequest;
 import com.backend.dto.response.UserDto;
 import com.backend.dto.response.drive.FolderDto;
 import com.backend.entity.folder.File;
@@ -112,11 +113,11 @@ public class DriveController {
         //파일 가져오기
         List<FileRequestDto> files = folderService.getFiles(folderId);
 
-        files.forEach(file -> {
-            String remoteFilePath = file.getPath(); // SFTP 상의 원격 경로
-            String thumbnailPath = thumbnailService.generateThumbnailIfNotExists(remoteFilePath, file.getSavedName());
-            file.setThumbnailPath(thumbnailPath); // 썸네일 경로 설정
-        });
+//        files.forEach(file -> {
+//            String remoteFilePath = file.getPath(); // SFTP 상의 원격 경로
+//            String thumbnailPath = thumbnailService.generateThumbnailIfNotExists(remoteFilePath, file.getSavedName());
+//            file.setThumbnailPath(thumbnailPath); // 썸네일 경로 설정
+//        });
 
 
         response.put("files",files);
@@ -140,6 +141,25 @@ public class DriveController {
         return null;
     }
 
+
+    @PutMapping("/rename")
+    public  ResponseEntity<?> changeName(@RequestBody RenameRequest renameRequest) {
+        String id = renameRequest.getId();
+        String type = renameRequest.getType();
+        String newName = renameRequest.getNewName();
+        System.out.println("ID: " + id + ", Type: " + type + ", New Name: " + newName);
+
+        if(type.equals("folder")){
+            folderService.reNameFolder(renameRequest);
+
+        }else if(type.equals("file")){
+            folderService.reNameFile(id, newName);
+        }
+
+        return null;
+
+
+    }
 
     //폴더 이름 바꾸기
     @PutMapping("/folder/{folderId}/move")
@@ -173,6 +193,21 @@ public class DriveController {
         folderService.uploadFiles(files,folderId,maxOrder,uid);
 
         return null;
+    }
+
+
+    //폴더 삭제
+    @DeleteMapping("/folder/delete/{folderId}")
+    public ResponseEntity deleteFolder(@PathVariable String folderId,@RequestParam String path){
+
+        log.info("Delete folder:"+folderId+" path : "+path);
+        boolean result = folderService.goToTrash(folderId,"folder");
+
+        if(result){
+            return ResponseEntity.ok().body("Folder deleted successfully");
+        }else{
+            return ResponseEntity.status(HttpStatus.EXPECTATION_FAILED).body("Folder delete failed");
+        }
     }
 
 
