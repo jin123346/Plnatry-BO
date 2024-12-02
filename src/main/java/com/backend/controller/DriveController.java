@@ -1,21 +1,22 @@
 package com.backend.controller;
 
 
+import com.backend.dto.request.FileRequestDto;
+import com.backend.dto.request.drive.MoveFolderRequest;
 import com.backend.dto.request.drive.NewDriveRequest;
 import com.backend.dto.response.UserDto;
 import com.backend.dto.response.drive.FolderDto;
 import com.backend.entity.folder.File;
 import com.backend.entity.folder.Folder;
 import com.backend.entity.user.User;
-import com.backend.service.FolderService;
-import com.backend.service.PermissionService;
-import com.backend.service.SftpService;
-import com.backend.service.UserService;
+import com.backend.service.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.HashMap;
 import java.util.List;
@@ -33,6 +34,7 @@ public class DriveController {
     private final UserService userService;
     private final PermissionService permissionService;
     private final SftpService sftpService;
+    private final ThumbnailService thumbnailService;
 
     @PostMapping("/newDrive")
     public void createDrive(@RequestBody NewDriveRequest newDriveRequest) {
@@ -70,7 +72,6 @@ public class DriveController {
 
         FolderDto folderDto = folderService.getParentFolder(newDriveRequest.getParentId());
         newDriveRequest.setParentFolder(folderDto);
-        newDriveRequest.setOrder(folderDto.getOrder()+1);
         User currentUser = userService.getUserByuid(newDriveRequest.getOwner());
 
         String folderId = folderService.createDrive(newDriveRequest);
@@ -105,10 +106,24 @@ public class DriveController {
     @GetMapping("/folder-contents")
     public ResponseEntity<Map<String, Object>> getFolderContents(@RequestParam String folderId,@RequestParam String ownerId){
         Map<String,Object> response = new HashMap<>();
+        //폴더 가져오기
         List<FolderDto> subFolders = folderService.getSubFolders(ownerId,folderId);
+
+        //파일 가져오기
+        List<FileRequestDto> files = folderService.getFiles(folderId);
+
+        files.forEach(file -> {
+            String remoteFilePath = file.getPath(); // SFTP 상의 원격 경로
+            String thumbnailPath = thumbnailService.generateThumbnailIfNotExists(remoteFilePath, file.getSavedName());
+            file.setThumbnailPath(thumbnailPath); // 썸네일 경로 설정
+        });
+
+
+        response.put("files",files);
         response.put("subFolders", subFolders);
 
         log.info("subFolders:"+subFolders);
+        log.info("files:"+files);
 
 
         return ResponseEntity.ok().body(response);
@@ -124,4 +139,41 @@ public class DriveController {
 
         return null;
     }
+
+
+    //폴더 이름 바꾸기
+    @PutMapping("/folder/{folderId}/move")
+    public ResponseEntity moveFolder(@RequestBody MoveFolderRequest moveFolderRequest, @PathVariable String folderId){
+        log.info("move folder name:"+moveFolderRequest);
+
+        double changedOrder =  folderService.updateFolder(moveFolderRequest);
+
+        if(moveFolderRequest.getOrder()== changedOrder){
+            return ResponseEntity.ok().body("Folder updated successfully");
+        }else{
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Folder update failed");
+        }
+
+
+    }
+
+
+
+    // 파일 업로드 처리
+    @PostMapping("/upload/{folderId}")
+    public ResponseEntity<?> uploadFiles( @PathVariable String folderId,
+                                          @RequestParam("file") List<MultipartFile> files,
+                                          @RequestParam("maxOrder") double maxOrder,
+                                          @RequestParam("uid") String uid
+    )  {
+
+        log.info("Upload files"+files);
+        log.info("folderId:"+folderId);
+
+        folderService.uploadFiles(files,folderId,maxOrder,uid);
+
+        return null;
+    }
+
+
 }
