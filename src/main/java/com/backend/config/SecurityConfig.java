@@ -7,6 +7,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -30,6 +31,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
+@Log4j2
 @Configuration
 @RequiredArgsConstructor
 public class SecurityConfig implements WebMvcConfigurer {
@@ -57,8 +59,7 @@ public class SecurityConfig implements WebMvcConfigurer {
     @Bean
     protected CorsConfigurationSource corsConfigurationSource(){
         CorsConfiguration corsConfiguration = new CorsConfiguration();
-        corsConfiguration.addAllowedOrigin("http://localhost:8010");
-        corsConfiguration.addAllowedOrigin("http://13.124.94.213:90");
+        corsConfiguration.setAllowedOriginPatterns(List.of("http://localhost:8010", "http://13.124.94.213:90"));
         corsConfiguration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         corsConfiguration.addAllowedHeader("*");
         corsConfiguration.setAllowCredentials(true); // 쿠키 허용
@@ -83,12 +84,16 @@ public class SecurityConfig implements WebMvcConfigurer {
                 throws ServletException, IOException {
             String token = extractTokenFromHeader(request);
 
+            log.info("헤더에서 토큰을 잘 뽑는디 확인 "+token);
+
             try {
                 if (token != null && jwtTokenProvider.validateToken(token)) {
                     if (jwtTokenProvider.isTokenExpired(token)) {
                         throw new IllegalArgumentException("Token has expired");
                     }
                     authenticateWithToken(token);
+                }else {
+                    log.info("토큰 없따");
                 }
             } catch (Exception e) {
                 SecurityContextHolder.clearContext(); // Clear context on failure
