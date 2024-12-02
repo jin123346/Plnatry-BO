@@ -32,6 +32,11 @@ public class AuthController {
     private final PasswordEncoder passwordEncoder;
     private final RedisTemplate redisTemplate;
 
+    @GetMapping("/test")
+    public ResponseEntity<?> testapi (){
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+    }
+
     //2024/11/29 박연화 토큰 발급 수정
     @PostMapping("/login")
     public ResponseEntity<?> login(
@@ -58,7 +63,7 @@ public class AuthController {
             cookie.setMaxAge(60*60*24*7);
             resp.addCookie(cookie);
 
-            //리프레시토큰 redis 저장
+            //리프레시토큰 redis 저장 할까말까
 //            storeRefreshTokenInRedis(refreshToken, userDto.getUid(), userDto.getRole().toString(), Duration.ofDays(7).toMillis());
 
 
