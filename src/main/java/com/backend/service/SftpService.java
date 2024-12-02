@@ -7,6 +7,7 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.util.Properties;
 import java.util.Vector;
 
 @Log4j2
@@ -21,6 +22,7 @@ public class SftpService {
     private static final String SFTP_PASSWORD = "Lotte4!@12";
 
     private static final String BASE_SFTP_DIR = "/uploads/";
+
 
     //user별 sftpUser 생성
     public boolean  createUserFolderOnSftp(String username) {
@@ -220,7 +222,7 @@ public class SftpService {
     }
 
 
-    public boolean uploadFile(String localFilePath, String remoteDir, String remoteFileName) {
+    public String uploadFile(String localFilePath, String remoteDir, String remoteFileName) {
         try {
             // SFTP 연결 설정
             JSch jsch = new JSch();
@@ -247,10 +249,10 @@ public class SftpService {
             // 연결 종료
             channelSftp.disconnect();
             session.disconnect();
-            return true;
+            return remoteDir+"/"+remoteFileName;
         } catch (JSchException | SftpException e) {
             log.error("File upload failed: {}", e.getMessage());
-            return false;
+            return null;
         }
     }
 
@@ -336,10 +338,6 @@ public class SftpService {
                 continue;
             }
 
-
-
-
-
             if (entry.getAttrs().isDir()) {
                 // 디렉토리인 경우 재귀적으로 크기 계산
                 totalSize += calculateSizeRecursive(channelSftp, path + "/" + fileName);
@@ -354,6 +352,59 @@ public class SftpService {
     }
 
 
+    public boolean renameFolder(String currentPath, String newPath){
+        try {
+            // SFTP 연결 설정
+            JSch jsch = new JSch();
+            Session session = jsch.getSession(SFTP_USER, SFTP_HOST, SFTP_PORT);
+            session.setPassword(SFTP_PASSWORD);
+            session.setConfig("StrictHostKeyChecking", "no");
+            session.connect();
+
+            ChannelSftp channelSftp = (ChannelSftp) session.openChannel("sftp");
+            channelSftp.connect();
+
+            channelSftp.rename(currentPath, newPath);
+            System.out.println("폴더 이름이 성공적으로 변경되었습니다.");
+
+            // 연결 종료
+            channelSftp.disconnect();
+            session.disconnect();
+            return true;
+        } catch (JSchException | SftpException e) {
+            System.err.println("폴더 이름 변경 실패: " + e.getMessage());
+            return false;
+        }
+    }
+
+    public boolean delete(String path){
+        try {
+            // SFTP 연결 설정
+            JSch jsch = new JSch();
+            Session session = jsch.getSession(SFTP_USER, SFTP_HOST, SFTP_PORT);
+            session.setPassword(SFTP_PASSWORD);
+            session.setConfig("StrictHostKeyChecking", "no");
+            session.connect();
+
+            ChannelExec channelExec = (ChannelExec) session.openChannel("exec");
+            String command = "rm -rf " + path;
+            channelExec.setCommand(command);
+            channelExec.connect();
+
+            System.out.println("폴더와 하위 파일이 모두 삭제되었습니다.");
+
+            channelExec.disconnect();
+            session.disconnect();
+            return true;
+        } catch (JSchException e ) {
+            System.err.println("폴더 삭제 실패: " + e.getMessage());
+            return false;
+        }
+
+    }
 
 
-}
+
+
+
+    }
