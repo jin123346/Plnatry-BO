@@ -6,11 +6,9 @@ import com.backend.dto.response.GetAdminUsersApprovalRespDto;
 import com.backend.dto.response.GetAdminUsersDtailRespDto;
 import com.backend.dto.response.GetAdminUsersRespDto;
 import com.backend.dto.response.group.GetGroupsAllDto;
-import com.backend.dto.response.user.GetUsersAllDto;
 import com.backend.entity.group.GroupLeader;
 import com.backend.entity.group.Group;
 import com.backend.entity.group.GroupMapper;
-import com.backend.entity.user.Attendance;
 import com.backend.entity.user.User;
 import com.backend.repository.GroupLeaderRepository;
 import com.backend.repository.GroupMapperRepository;
@@ -25,8 +23,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 @Service
@@ -318,6 +314,12 @@ public class GroupService {
         Page<Group> groups = groupRepository.findAllByCompanyAndNameContainingAndStatusIsNot("1246857",keyword,0,pageable);
         Page<GetGroupsAllDto> dtos = groups.map(Group::toGetGroupsAllDto);
         return dtos;
+    }
+
+    //12.02 전규찬 findGroupNameByUser 추가
+    public String findGroupNameByUser(User user) {
+        GroupMapper groupMapper = groupMapperRepository.findByUser(user);
+        return groupMapper.getGroup().getName();
     }
 
 }
