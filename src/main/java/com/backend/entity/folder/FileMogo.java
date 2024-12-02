@@ -42,7 +42,7 @@ public class FileMogo {
     private int isShared = 0; // 1이 share중
     private int isPinned = 0; // 1: 고정 폴더
 
-    private Status status; // 파일 삭제 여부 (논리적 삭제)
+    private int status =0 ; // 파일 삭제 여부 (논리적 삭제)
 
     @CreationTimestamp
     private LocalDateTime createdAt; // 파일 생성 날짜 및 시간
