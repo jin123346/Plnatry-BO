@@ -2,8 +2,11 @@ package com.backend.controller;
 
 import com.backend.dto.request.calendar.*;
 import com.backend.service.CalendarService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.apache.coyote.Response;
+import org.springframework.http.HttpRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.SendTo;
@@ -52,16 +55,17 @@ public class CalendarController {
 
     @GetMapping("/calendar/name")
     public ResponseEntity<?> getCalendarName (
-            @RequestParam Long id
     ){
-        ResponseEntity<?> response = calendarService.getCalendarName(id);
+        ResponseEntity<?> response = calendarService.getCalendarName(9L);
         return response;
     }
 
     @GetMapping("/calendar")
     public ResponseEntity<?> getCalendar (
-            @RequestParam(value = "calendarId",defaultValue = "0") Long calendarId
+            @RequestParam(value = "calendarId",defaultValue = "0") Long calendarId,
+            HttpServletRequest req
     ){
+
         if(calendarId==0){
             ResponseEntity<?> response = calendarService.getCalendar();
             return response;

@@ -41,7 +41,6 @@ public class WebSocketController {
 
             // 구독한 캘린더에 해당하는 사용자가 있을 경우 메시지 전송
             if (subscribedCalendars.contains("19")) {
-                System.out.println("==================12312312321==========================");
                 messagingTemplate.convertAndSend( "/topic/calendar/19", "{\"message\": \"Subscribed to calendar: " + 19 + "\"}");
             }
         }

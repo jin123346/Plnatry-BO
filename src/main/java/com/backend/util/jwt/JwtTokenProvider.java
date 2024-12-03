@@ -40,36 +40,44 @@ public class JwtTokenProvider {
                     .setSubject(username)
                     .setIssuedAt(now)
                     .setExpiration(expireDate)
+                    .claim("role", role)
                     .signWith(SignatureAlgorithm.HS256, getSigningKey())
                     .compact();
         }
     }
 
     private byte[] getSigningKey() {
-        return secret.getBytes(StandardCharsets.UTF_8);
+        try {
+            return secret.getBytes(StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            log.error("서명 키를 가져오는 중 오류 발생", e);
+            throw e;
+        }
     }
 
     public Claims getClaims(String token) {
         log.info("getClaims 메서드 호출, 토큰: {}", token);
         try {
+            // JWT 파싱 및 Claims 추출
             return Jwts.parser()
                     .setSigningKey(getSigningKey())
                     .parseClaimsJws(token)
                     .getBody();
         } catch (ExpiredJwtException e) {
-            log.error("토큰이 만료되었습니다: {}", token, e);
-            throw e; // 혹은 예외를 사용자 정의 예외로 변환
+            log.error("토큰이 만료되었습니다: {}", token, e);  // 만료된 토큰 로그
+            throw e; // 예외를 던져서 필터에서 처리
         } catch (MalformedJwtException e) {
-            log.error("잘못된 JWT 형식입니다: {}", token, e);
-            throw e;
+            log.error("잘못된 JWT 형식입니다: {}", token, e);  // 잘못된 형식 로그
+            throw e;  // 예외를 던져서 필터에서 처리
         } catch (io.jsonwebtoken.security.SecurityException e) {
-            log.error("JWT 서명이 올바르지 않습니다: {}", token, e);
-            throw e;
+            log.error("JWT 서명이 올바르지 않습니다: {}", token, e);  // 서명 오류 로그
+            throw e;  // 예외를 던져서 필터에서 처리
         } catch (Exception e) {
-            log.error("JWT 처리 중 알 수 없는 오류 발생: {}", token, e);
-            throw e;
+            log.error("JWT 처리 중 알 수 없는 오류 발생: {}", token, e);  // 기타 오류 로그
+            throw e;  // 예외를 던져서 필터에서 처리
         }
     }
+
 
     public String getRoleFromToken(String token) {
         Claims claims = Jwts.parser()
