@@ -1,8 +1,6 @@
 package com.backend.dto.chat;
 
 import com.backend.document.chat.ChatMemberDocument;
-import com.backend.dto.response.UserDto;
-import com.backend.entity.user.User;
 import jakarta.persistence.Id;
 import lombok.*;
 
@@ -25,9 +23,10 @@ public class ChatMembersDTO {
     private Integer level;
     private String group;
     private String profileUrl;
-    private List<Long> roomIds = new ArrayList<>();
+    private List<ChatMembersDTO> frequent_members;
+    private List<String> roomIds = new ArrayList<>();
 
-    public ChatMemberDocument toDocument(){
+    public ChatMemberDocument toDocument() {
         return ChatMemberDocument.builder()
                 .uid(this.uid)
                 .username(this.username)
@@ -36,6 +35,7 @@ public class ChatMembersDTO {
                 .level(this.level)
                 .group(this.group)
                 .profileUrl(this.profileUrl)
+                .frequent_members(this.frequent_members.stream().map(ChatMembersDTO::toDocument).toList())
                 .roomIds(this.roomIds)
                 .build();
     }
