@@ -1,11 +1,9 @@
-package com.backend.entity.folder;
+package com.backend.document.drive;
 
 import com.backend.dto.response.drive.FolderDto;
-import com.backend.entity.user.User;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.mongodb.core.mapping.Document;
 
@@ -40,7 +38,7 @@ public class Folder {
     @Builder.Default
     private int linkSharing =0 ; //링크 공유 여부  허용하지않음 0 , 허용 1
     @Builder.Default
-    private int status = 0; // 상태
+    private int status = 1; // 상태
 
     @Builder.Default
     private int isPinned = 0; // 1: 고정 폴더
