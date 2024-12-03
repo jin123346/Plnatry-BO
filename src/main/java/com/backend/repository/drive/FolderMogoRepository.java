@@ -1,10 +1,8 @@
 package com.backend.repository.drive;
 
-import com.backend.entity.folder.Folder;
+import com.backend.document.drive.Folder;
 import org.springframework.data.mongodb.repository.MongoRepository;
-import org.springframework.data.mongodb.repository.Query;
 import org.springframework.stereotype.Repository;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -13,9 +11,11 @@ import java.util.Optional;
 @Repository
 public interface FolderMogoRepository extends MongoRepository<Folder, String>   {
 
-    List<Folder> findByOwnerIdAndParentIdOrderByOrder(String uid, String parentId);
+    List<Folder> findByOwnerIdAndParentIdAndStatusIsNotOrderByOrder(String uid, String parentId ,int status);
     Optional<Folder> findByParentId(String parentId);
     Folder findByName(String name);
+
+    List<Folder> findByOwnerIdAndParentIdAndStatus(String uid, String parentId, int status);
 
 
 
