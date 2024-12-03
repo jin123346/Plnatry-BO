@@ -107,7 +107,7 @@ public class AuthController {
 
     @PostMapping("/refresh")
     public ResponseEntity<?> refreshAccessToken(@CookieValue(name = "refresh_token", required = false) String refreshToken) {
-
+        System.out.println(refreshToken);
         log.info("리프레시 액세스토큰 컨트롤러 접속... " + refreshToken);
         if (refreshToken == null) {
             log.info("리프레시 토큰 널");
