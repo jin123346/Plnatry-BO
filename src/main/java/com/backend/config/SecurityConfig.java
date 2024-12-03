@@ -54,16 +54,16 @@ public class SecurityConfig implements WebMvcConfigurer {
 
 //                        .requestMatchers("/api/auth/**").permitAll()
 //                        .requestMatchers("/api/**").authenticated()
-                        .anyRequest().permitAll()
+                                .anyRequest().permitAll()
                 )
                 .build();
     }
 
     @Bean
-    protected CorsConfigurationSource corsConfigurationSource(){
+    protected CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration corsConfiguration = new CorsConfiguration();
         corsConfiguration.setAllowedOriginPatterns(List.of("http://localhost:8010", "http://13.124.94.213:90"));
-        corsConfiguration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        corsConfiguration.setAllowedMethods(Arrays.asList("GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"));
         corsConfiguration.addAllowedHeader("Authorization");
         corsConfiguration.addAllowedHeader("Content-Type");
         corsConfiguration.addAllowedHeader("Accept");
@@ -93,7 +93,7 @@ public class SecurityConfig implements WebMvcConfigurer {
             String token = extractTokenFromHeader(request);
             System.out.println("===123123=");
 
-            log.info("헤더에서 토큰을 잘 뽑는디 확인 "+token);
+            log.info("헤더에서 토큰을 잘 뽑는디 확인 " + token);
             System.out.println(token);
             try {
                 if (token != null && jwtTokenProvider.validateToken(token)) {
@@ -101,9 +101,9 @@ public class SecurityConfig implements WebMvcConfigurer {
                         throw new IllegalArgumentException("Token has expired");
                     }
                     AuthenticateDto auth = authenticateWithToken(token);
-                    request.setAttribute("uid",auth.getUid());
-                    request.setAttribute("role",auth.getRole());
-                }else {
+                    request.setAttribute("uid", auth.getUid());
+                    request.setAttribute("role", auth.getRole());
+                } else {
                     log.info("토큰 없따");
                 }
             } catch (Exception e) {

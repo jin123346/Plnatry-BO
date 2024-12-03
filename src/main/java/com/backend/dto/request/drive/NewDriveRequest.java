@@ -23,6 +23,7 @@ public class NewDriveRequest {
     private int isShared;        // 공유 여부 (0: 나만 사용, 1: 선택한 구성원, 2: 전체 구성원)
     private int linkSharing;  // 링크 공유 (0: 허용안함, 1: 허용함)
     private String parentId;
+    private int status;
 
     private FolderDto parentFolder;
 }
