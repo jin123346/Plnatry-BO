@@ -34,7 +34,7 @@ public class CalendarService {
     private final CalendarMapperRepository calendarMapperRepository;
 
     public ResponseEntity<?> getCalendarName(Long id) {
-        Optional<User> user = userRepository.findById(9L);
+        Optional<User> user = userRepository.findById(id);
         if(user.isEmpty()){
             return ResponseEntity.ok().body("로그인 정보가 일치하지 않습니다.");
         }

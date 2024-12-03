@@ -1,5 +1,6 @@
 package com.backend.config;
 
+import com.backend.dto.request.AuthenticateDto;
 import com.backend.util.jwt.JwtTokenProvider;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
@@ -16,6 +17,7 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.CsrfConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -49,8 +51,9 @@ public class SecurityConfig implements WebMvcConfigurer {
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/api/**").authenticated()
+
+//                        .requestMatchers("/api/auth/**").permitAll()
+//                        .requestMatchers("/api/**").authenticated()
                         .anyRequest().permitAll()
                 )
                 .build();
@@ -61,7 +64,12 @@ public class SecurityConfig implements WebMvcConfigurer {
         CorsConfiguration corsConfiguration = new CorsConfiguration();
         corsConfiguration.setAllowedOriginPatterns(List.of("http://localhost:8010", "http://13.124.94.213:90"));
         corsConfiguration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        corsConfiguration.addAllowedHeader("*");
+        corsConfiguration.addAllowedHeader("Authorization");
+        corsConfiguration.addAllowedHeader("Content-Type");
+        corsConfiguration.addAllowedHeader("Accept");
+        corsConfiguration.addAllowedHeader("X-Requested-With");
+        corsConfiguration.addAllowedHeader("Cache-Control");
+        corsConfiguration.addAllowedHeader("X-Custom-Header");
         corsConfiguration.setAllowCredentials(true); // 쿠키 허용
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", corsConfiguration);
@@ -83,15 +91,18 @@ public class SecurityConfig implements WebMvcConfigurer {
         protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
                 throws ServletException, IOException {
             String token = extractTokenFromHeader(request);
+            System.out.println("===123123=");
 
             log.info("헤더에서 토큰을 잘 뽑는디 확인 "+token);
-
+            System.out.println(token);
             try {
                 if (token != null && jwtTokenProvider.validateToken(token)) {
                     if (jwtTokenProvider.isTokenExpired(token)) {
                         throw new IllegalArgumentException("Token has expired");
                     }
-                    authenticateWithToken(token);
+                    AuthenticateDto auth = authenticateWithToken(token);
+                    request.setAttribute("uid",auth.getUid());
+                    request.setAttribute("role",auth.getRole());
                 }else {
                     log.info("토큰 없따");
                 }
@@ -109,15 +120,30 @@ public class SecurityConfig implements WebMvcConfigurer {
             return (header != null && header.startsWith("Bearer ")) ? header.substring(7) : null;
         }
 
-        private void authenticateWithToken(String token) {
+        private AuthenticateDto authenticateWithToken(String token) {
             Claims claims = jwtTokenProvider.getClaims(token);
             String username = claims.getSubject();
             String role = claims.get("role", String.class);
 
+            log.info("토큰에서 추출한 사용자명: {}", username);
+            log.info("토큰에서 추출한 역할: {}", role);
+
+            if (username == null || role == null) {
+                log.error("사용자명 또는 역할이 null입니다. 토큰: {}", token);
+            }
+
             UsernamePasswordAuthenticationToken authentication =
                     new UsernamePasswordAuthenticationToken(username, null, List.of(new SimpleGrantedAuthority(role)));
 
+            log.info("Authentication 객체 생성 완료: {}", authentication);
+
             SecurityContextHolder.getContext().setAuthentication(authentication);
+            AuthenticateDto auth = AuthenticateDto.builder()
+                    .uid(username)
+                    .role(role)
+                    .build();
+
+            return auth;
         }
     }
 
