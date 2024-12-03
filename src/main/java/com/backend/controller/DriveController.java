@@ -36,9 +36,10 @@ public class DriveController {
     private final ThumbnailService thumbnailService;
 
     @PostMapping("/newDrive")
-    public void createDrive(@RequestBody NewDriveRequest newDriveRequest) {
+    public void createDrive(@RequestBody NewDriveRequest newDriveRequest,HttpServletRequest request) {
         log.info("New drive request: " + newDriveRequest);
-
+        String uid= (String) request.getAttribute("uid");
+        newDriveRequest.setOwner(uid);
         User currentUser = userService.getUserByuid(newDriveRequest.getOwner());
         Folder forFolder = folderService.getFolderName(currentUser.getUid());
         if(forFolder == null) {
@@ -66,8 +67,11 @@ public class DriveController {
 
 
     @PostMapping("/newFolder")
-    public void createFolder(@RequestBody NewDriveRequest newDriveRequest) {
+    public void createFolder(@RequestBody NewDriveRequest newDriveRequest,HttpServletRequest request) {
         log.info("New drive request: " + newDriveRequest);
+
+        String uid= (String) request.getAttribute("uid");
+        newDriveRequest.setOwner(uid);
 
         FolderDto folderDto = folderService.getParentFolder(newDriveRequest.getParentId());
         newDriveRequest.setParentFolder(folderDto);
@@ -83,10 +87,13 @@ public class DriveController {
 
     //사이드바  폴더 리스트 불러오기
     @GetMapping("/folders")
-    public ResponseEntity getDriveList(HttpServletRequest request) {
+    public ResponseEntity getDriveList(HttpServletRequest request,@RequestParam(required = false) String uid) {
 
-        String uid = request.getHeader("uid");
-//        uid="worker1";
+
+        if(uid == null) {
+            uid= (String) request.getAttribute("uid");
+        }
+        uid="worker1";
         log.info("uid1!!"+uid);
 
         if (uid == null || uid.isEmpty()) {
