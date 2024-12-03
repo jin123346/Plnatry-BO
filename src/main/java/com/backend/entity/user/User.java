@@ -44,7 +44,7 @@ public class User {
     private Role role; // 역할
 
     @Column(name = "level")
-    private Integer level;
+    private Integer level; //직급
 
     @Column(name = "grade")
     private Integer grade; // 결제등급 enum 변경
@@ -59,25 +59,25 @@ public class User {
     private String name;
 
     @Column(name = "city")
-    private String city; 
+    private String addr1;
 
     @Column(name = "country")
     private String country;
 
     @Column(name = "address")
-    private String address;
+    private String addr2;
 
     @Column(name = "company")
     private String company;
 
-    @Column(name = "payment_token")
-    private String paymentToken; // 결제정보
+    @Column(name = "company_code")
+    private String companyCode;
+
+    @Column(name = "payment_id")
+    private Long paymentId; // 결제정보 :: 카드아이디
 
     @Column(name = "payment_day")
     private String day;
-
-    @Column(name = "refresh_token")
-    private String refreshToken;
 
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "user")
     @ToString.Exclude
@@ -200,13 +200,12 @@ public class User {
                 .email(this.email)
                 .hp(this.hp)
                 .name(this.name)
-                .city(this.city)
+                .addr1(this.addr1)
                 .country(this.country)
-                .address(this.address)
+                .addr2(this.addr2)
                 .company(this.company)
-                .paymentToken(this.paymentToken)
+                .paymentId(this.paymentId)
                 .day(this.day)
-                .refreshToken(this.refreshToken)
                 .groupMappers(this.groupMappers)
                 .profileImg(this.profileImg != null ? this.profileImg.getSName() : "default.png") // 기본값 설정
                 .createAt(this.createAt)
@@ -311,5 +310,8 @@ public class User {
                 .id(this.id)
                 .level(levelString)
                 .build();
+    }
+    public void updateCompanyCode(String companyCode) {
+        this.companyCode = companyCode;
     }
 }
