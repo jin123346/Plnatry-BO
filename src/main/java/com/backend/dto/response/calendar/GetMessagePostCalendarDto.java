@@ -10,11 +10,8 @@ import java.util.List;
 @Getter
 @Setter
 @Builder
-public class GetCalendarNameDto {
-    private Long id;
+public class GetMessagePostCalendarDto {
     private String name;
-    private Integer status;
     private String color;
-    private List<Long> userIds;
-    private Long myid;
+    private int status;
 }

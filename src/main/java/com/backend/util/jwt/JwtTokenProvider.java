@@ -20,7 +20,7 @@ public class JwtTokenProvider {
     private String issuer;
     // 사용자 이름
 
-    public String createToken(String username, String role, String type) {
+    public String createToken(String username, String role, Long id, String type) {
         Date now = new Date();  // 현재 시간
         Date expireDate = null;
 
@@ -31,6 +31,7 @@ public class JwtTokenProvider {
                     .setSubject(username)
                     .setIssuedAt(now)
                     .setExpiration(expireDate)
+                    .claim("id", id)
                     .claim("role", role)
                     .signWith(SignatureAlgorithm.HS256, getSigningKey())
                     .compact();
@@ -40,6 +41,7 @@ public class JwtTokenProvider {
                     .setSubject(username)
                     .setIssuedAt(now)
                     .setExpiration(expireDate)
+                    .claim("id", id)
                     .claim("role", role)
                     .signWith(SignatureAlgorithm.HS256, getSigningKey())
                     .compact();
@@ -63,6 +65,7 @@ public class JwtTokenProvider {
                     .setSigningKey(getSigningKey())
                     .parseClaimsJws(token)
                     .getBody();
+
         } catch (ExpiredJwtException e) {
             log.error("토큰이 만료되었습니다: {}", token, e);  // 만료된 토큰 로그
             throw e; // 예외를 던져서 필터에서 처리

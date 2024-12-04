@@ -52,9 +52,8 @@ public class AuthController {
 
             UserDto userDto = user.get().toSliceDto();
             log.info("로그인 컨트롤러!!!!:" +userDto);
-
-            String accessToken = tokenProvider.createToken(userDto.getUid(),userDto.getRole().toString(), "access");
-            String refreshToken = tokenProvider.createToken(userDto.getUid(),userDto.getRole().toString(), "refresh");
+            String accessToken = tokenProvider.createToken(userDto.getUid(),userDto.getRole().toString(),userDto.getId(), "access");
+            String refreshToken = tokenProvider.createToken(userDto.getUid(),userDto.getRole().toString(),userDto.getId(), "refresh");
 
             //쿠키에 저장해라
             Cookie cookie = new Cookie("refresh_token", refreshToken);
@@ -124,7 +123,8 @@ public class AuthController {
             // 새 액세스 토큰 생성
             String username = claims.getSubject();
             String role = claims.get("role", String.class);
-            String newAccessToken = tokenProvider.createToken(username, role, "access");
+            Long id = claims.get("id",Long.class);
+            String newAccessToken = tokenProvider.createToken(username, role, id, "access");
                 log.info("여긴가?2"+newAccessToken);
 
             return ResponseEntity.ok(Map.of("accessToken", newAccessToken));
