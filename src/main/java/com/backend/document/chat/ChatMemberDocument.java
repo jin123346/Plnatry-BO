@@ -1,6 +1,5 @@
 package com.backend.document.chat;
 
-import com.backend.entity.user.User;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.data.mongodb.core.mapping.Document;
@@ -24,5 +23,6 @@ public class ChatMemberDocument {
     private Integer level;
     private String group;
     private String profileUrl;
-    private List<Long> roomIds = new ArrayList<>();
+    private List<ChatMemberDocument> frequent_members;
+    private List<String> roomIds = new ArrayList<>();
 }

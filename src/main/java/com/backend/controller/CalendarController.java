@@ -27,7 +27,7 @@ public class CalendarController {
     @PostMapping("/calendar/content")
     public ResponseEntity<?> postCalendarContent (
             @RequestBody PostCalendarContentDto dto
-            ) {
+    ) {
         ResponseEntity<?> response = calendarService.postCalendarContent(dto);
         return response;
     }
@@ -107,7 +107,7 @@ public class CalendarController {
 
     @DeleteMapping("/calendar/content")
     public ResponseEntity<?> deleteCalendarContent (
-        @RequestParam Long id
+            @RequestParam Long id
     ){
         ResponseEntity<?> response = calendarService.deleteCalendarContent(id);
         return response;
@@ -116,7 +116,7 @@ public class CalendarController {
     @PostMapping("/calendar")
     public ResponseEntity<?> postCalendar (
             @RequestBody PostCalendarDto dto
-            ){
+    ){
 
         ResponseEntity<?> response = calendarService.postCalendar(dto);
         return response;
@@ -133,7 +133,7 @@ public class CalendarController {
     @PutMapping("/calendar")
     public ResponseEntity<?> putCalendar (
             @RequestBody PutCalendarDto dtos
-            ){
+    ){
         ResponseEntity<?> response = calendarService.putCalendar(dtos);
         return response;
     }
@@ -155,7 +155,7 @@ public class CalendarController {
         if (idObj != null) {
             id = Long.valueOf(idObj.toString());  // 문자열을 Long으로 변환
         } else {
-           id= 0L;
+            id= 0L;
         }
         ResponseEntity<?> response = calendarService.getGroupIds(id);
         return response;

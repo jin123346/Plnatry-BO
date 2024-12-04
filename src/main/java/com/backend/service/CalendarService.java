@@ -343,22 +343,18 @@ public class CalendarService {
 
     public ResponseEntity<?> getCalendarByGroup(Long id) {
         Long userId = 9L;
-        System.out.println("1111");
         Optional<User> user = userRepository.findById(userId);
         if(user.isEmpty()){
             return ResponseEntity.badRequest().body("로그인 정보가 일치하지않습니다.");
         }
-        System.out.println("1112");
         Optional<Calendar> calendar = calendarRepository.findByCalendarId(id);
         if(calendar.isEmpty()){
             return ResponseEntity.badRequest().body("캘린더 정보가 일치하지않습니다.");
         }
-        System.out.println("1113");
         List<CalendarMapper> mappers = calendarMapperRepository.findAllByCalendar(calendar.get());
         if(mappers.isEmpty()){
             return ResponseEntity.badRequest().body("캘린더 정보가 일치하지않습니다.");
         }
-        System.out.println("1114");
         List<GetUsersAllDto> dtos = new ArrayList<>();
         for (CalendarMapper mapper : mappers) {
             GetUsersAllDto mapperUser = mapper.getUser().toGetUsersAllDto();

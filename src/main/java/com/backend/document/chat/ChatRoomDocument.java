@@ -1,5 +1,6 @@
 package com.backend.document.chat;
 
+import com.backend.dto.chat.ChatRoomDTO;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.data.mongodb.core.mapping.Document;
@@ -24,4 +25,15 @@ public class ChatRoomDocument {
     private String leader;  // 방장 uid
     private List<String> members;  // 채팅방 구성원 uid
 
+    public ChatRoomDTO toDTO() {
+        return ChatRoomDTO.builder()
+                .id(this.id)
+                .status(this.status)
+                .chatRoomFavorite(this.chatRoomFavorite)
+                .chatRoomReadCnt(this.chatRoomReadCnt)
+                .chatRoomName(this.chatRoomName)
+                .leader(this.leader)
+                .members(this.members)
+                .build();
+    }
 }

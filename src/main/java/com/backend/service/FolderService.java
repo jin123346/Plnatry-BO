@@ -6,20 +6,16 @@ import com.backend.dto.request.drive.MoveFolderRequest;
 import com.backend.dto.request.drive.NewDriveRequest;
 import com.backend.dto.request.drive.RenameRequest;
 import com.backend.dto.response.drive.FolderDto;
-import com.backend.entity.folder.FileMogo;
-import com.backend.entity.folder.Folder;
+import com.backend.document.drive.FileMogo;
+import com.backend.document.drive.Folder;
 import com.backend.repository.drive.FileMogoRepository;
 import com.backend.repository.drive.FolderMogoRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -73,11 +69,12 @@ public class FolderService {
                    .path(makeDrivePath)
                    .ownerId(uid)
                    .description(request.getDescription())
-                   .status(0)
+                   .status(1)
                    .isShared(request.getIsShared())
                    .linkSharing(request.getLinkSharing())
                    .updatedAt(LocalDateTime.now())
                    .build();
+
 
            Folder savedFolder =  folderMogoRepository.save(folder);
 
@@ -103,9 +100,10 @@ public class FolderService {
                     .path(makeDrivePath)
                     .ownerId(uid)
                     .description(request.getDescription())
-                    .status(0)
+                    .status(1)
                     .isShared(request.getIsShared())
                     .linkSharing(request.getLinkSharing())
+                    .createdAt(LocalDateTime.now())
                     .updatedAt(LocalDateTime.now())
                     .build();
 
@@ -120,7 +118,8 @@ public class FolderService {
 
 
     public List<FolderDto> getFoldersByUid(String uid,String parentId){
-        List<Folder> folders = folderMogoRepository.findByOwnerIdAndParentIdOrderByOrder(uid,parentId);
+        List<Folder> folders = folderMogoRepository.findByOwnerIdAndParentIdAndStatus(uid,parentId,1);
+        log.info("폴더 리스트!!!!"+folders);
             List<FolderDto> folderDtos = folders.stream().map(folder -> {
                 FolderDto folderDto = FolderDto.builder()
                         .id(folder.getId())
@@ -129,7 +128,12 @@ public class FolderService {
                         .createdAt(folder.getCreatedAt())
                         .isShared(folder.getIsShared())
                         .isPinned(folder.getIsPinned())
+                        .status(folder.getStatus())
+                        .linkSharing(folder.getLinkSharing())
+                        .updatedAt(folder.getUpdatedAt())
+                        .parentId(parentId)
                         .build();
+                log.info(folderDto.toString());
                 return folderDto;
             }).collect(Collectors.toList());
             return folderDtos;
@@ -144,14 +148,14 @@ public class FolderService {
 
 
     public List<FolderDto> getSubFolders(String ownerId, String folderId){
-        List<Folder> folders =folderMogoRepository.findByOwnerIdAndParentIdOrderByOrder(ownerId,folderId);
+        List<Folder> folders =folderMogoRepository.findByOwnerIdAndParentIdAndStatusIsNotOrderByOrder(ownerId,folderId,0);
 
 
         return folders.stream().map(Folder::toDTO).collect(Collectors.toList());
     }
 
     public List<FileRequestDto> getFiles(String folderId){
-        List<FileMogo> files =fileMogoRepository.findByFolderId(folderId);
+        List<FileMogo> files =fileMogoRepository.findByFolderIdAndStatusIsNot(folderId,0);
         return files.stream()
                 .map(FileRequestDto::toDto)
                 .collect(Collectors.toList());
@@ -231,7 +235,7 @@ public class FolderService {
                     .createdAt(LocalDateTime.now())
                     .updatedAt(LocalDateTime.now())
                     .size(file.getSize())
-                    .status(0)
+                    .status(1)
                     .build();
 
             FileMogo saved = filedto.toEntity();
@@ -318,13 +322,13 @@ public class FolderService {
     public boolean goToTrash(String id, String type){
         if(type.equals("folder")){
             Query query = new Query(Criteria.where("_id").is(id));
-            Update update = new Update().set("status", 1);
+            Update update = new Update().set("status", 0);
 
             mongoTemplate.upsert(query, update, Folder.class);
             return true;
         }else if(type.equals("file")){
             Query query = new Query(Criteria.where("_id").is(id));
-            Update update = new Update().set("status", 1);
+            Update update = new Update().set("status", 0);
 
             mongoTemplate.upsert(query, update, FileMogo.class);
             return true;

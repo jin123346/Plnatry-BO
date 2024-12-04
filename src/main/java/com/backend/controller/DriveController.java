@@ -5,17 +5,15 @@ import com.backend.dto.request.FileRequestDto;
 import com.backend.dto.request.drive.MoveFolderRequest;
 import com.backend.dto.request.drive.NewDriveRequest;
 import com.backend.dto.request.drive.RenameRequest;
-import com.backend.dto.response.UserDto;
 import com.backend.dto.response.drive.FolderDto;
-import com.backend.entity.folder.File;
-import com.backend.entity.folder.Folder;
+import com.backend.document.drive.Folder;
 import com.backend.entity.user.User;
 import com.backend.service.*;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -38,9 +36,10 @@ public class DriveController {
     private final ThumbnailService thumbnailService;
 
     @PostMapping("/newDrive")
-    public void createDrive(@RequestBody NewDriveRequest newDriveRequest) {
+    public void createDrive(@RequestBody NewDriveRequest newDriveRequest,HttpServletRequest request) {
         log.info("New drive request: " + newDriveRequest);
-
+        String uid= (String) request.getAttribute("uid");
+        newDriveRequest.setOwner(uid);
         User currentUser = userService.getUserByuid(newDriveRequest.getOwner());
         Folder forFolder = folderService.getFolderName(currentUser.getUid());
         if(forFolder == null) {
@@ -68,8 +67,11 @@ public class DriveController {
 
 
     @PostMapping("/newFolder")
-    public void createFolder(@RequestBody NewDriveRequest newDriveRequest) {
+    public void createFolder(@RequestBody NewDriveRequest newDriveRequest,HttpServletRequest request) {
         log.info("New drive request: " + newDriveRequest);
+
+        String uid= (String) request.getAttribute("uid");
+        newDriveRequest.setOwner(uid);
 
         FolderDto folderDto = folderService.getParentFolder(newDriveRequest.getParentId());
         newDriveRequest.setParentFolder(folderDto);
@@ -85,7 +87,14 @@ public class DriveController {
 
     //사이드바  폴더 리스트 불러오기
     @GetMapping("/folders")
-    public ResponseEntity getDriveList(@RequestParam String uid){
+    public ResponseEntity getDriveList(HttpServletRequest request,@RequestParam(required = false) String uid) {
+
+
+        if(uid == null) {
+            uid= (String) request.getAttribute("uid");
+        }
+        uid="worker1";
+        log.info("uid1!!"+uid);
 
         if (uid == null || uid.isEmpty()) {
             return ResponseEntity.badRequest().body("UID is required.");
@@ -95,7 +104,7 @@ public class DriveController {
         if (rootFolder == null) {
             return ResponseEntity.ok().body("No folders found.");
         }
-        List<FolderDto> folderDtoList =  folderService.getFoldersByUid(uid, rootFolder.getId());
+        List<FolderDto> folderDtoList =  folderService.getFoldersByUid("worker1", rootFolder.getId());
         log.info("folderLIst!!!!"+folderDtoList);
 
         return ResponseEntity.ok().body(folderDtoList);
@@ -119,10 +128,8 @@ public class DriveController {
 //            file.setThumbnailPath(thumbnailPath); // 썸네일 경로 설정
 //        });
 
-
         response.put("files",files);
         response.put("subFolders", subFolders);
-
         log.info("subFolders:"+subFolders);
         log.info("files:"+files);
 

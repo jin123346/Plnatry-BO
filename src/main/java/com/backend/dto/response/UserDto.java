@@ -22,53 +22,29 @@ import java.util.List;
 public class UserDto {
 
     private Long id;
-
     private Integer status; // 상태
-
     private String uid; // 유아이디
-
     private String pwd; // 비밀번호
-
-    private Role role; // 역할
-
+    private Role role; // 역할 admin user company team 등등 시큐리티에서 쓰는 그거
     private Integer level;
-
-    private Integer grade; // 결제등급 enum 변경
-
+    private Integer grade; // 결제등급 basic company enterprise
     private String email;
-
     private String hp;
-
     private String name;
-
-    private String city;
-
+    private String addr1;
     private String country;
-
-    private String address;
-
+    private String addr2;
     private String company;
-
-    private String paymentToken; // 결제정보
-
+    private Long paymentId; // 결제정보
     private String day;
-
     private String refreshToken;
-
     @ToString.Exclude
     private List<GroupMapper> groupMappers;
-
     private LocalDateTime createAt;
-
     private LocalDateTime lastLogin;
-
     private LocalDate joinDate;
-
     private String profileImg;
-
     @ToString.Exclude
     private List<Attendance> attendance;
-
-
 
 }

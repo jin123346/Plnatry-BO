@@ -98,7 +98,7 @@ public class SecurityConfig implements WebMvcConfigurer {
             String token = extractTokenFromHeader(request);
 
             log.info("헤더에서 토큰을 잘 뽑는디 확인 "+token);
-            System.out.println(token);
+
             try {
                 if (token != null && jwtTokenProvider.validateToken(token)) {
                     if (jwtTokenProvider.isTokenExpired(token)) {
