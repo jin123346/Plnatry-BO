@@ -104,6 +104,18 @@ public class User {
     @ToString.Exclude
     private List<CalendarMapper> calendars;
 
+    public String selectLevelString(){
+        return switch (level) {
+            case 1 -> "사원";
+            case 2 -> "주임";
+            case 3 -> "대리";
+            case 4 -> "과장";
+            case 5 -> "차장";
+            case 6 -> "부장";
+            default -> "외주";
+        };
+    }
+
     public GetAdminUsersRespDto toGetAdminUsersRespDto() {
         return GetAdminUsersRespDto.builder()
                 .email(email)
@@ -114,30 +126,6 @@ public class User {
     }
 
     public GetAdminUsersDtailRespDto toGetAdminUsersDtailRespDto() {
-        String levelString;
-        switch (level) {
-            case 1:
-                levelString = "사원";
-                break;
-            case 2:
-                levelString = "주임";
-                break;
-            case 3:
-                levelString = "대리";
-                break;
-            case 4:
-                levelString = "과장";
-                break;
-            case 5:
-                levelString = "차장";
-                break;
-            case 6:
-                levelString = "부장";
-                break;
-            default:
-                levelString = "Unknown";  // Handle unexpected levels
-                break;
-        }
         String yearMonth = this.todaysYearMonth();
         Attendance attendance1 = attendance.stream().filter(v->v.getYearMonth().equals(yearMonth)).findFirst().get();
         String todayAttendance;
@@ -150,7 +138,7 @@ public class User {
         }
         return GetAdminUsersDtailRespDto.builder()
                 .email(email)
-                .level(levelString)
+                .level(this.selectLevelString())
                 .attendance(todayAttendance)
                 .createAt("아직 안뽑")
                 .status(status)
@@ -217,53 +205,21 @@ public class User {
 
     public UserDto toSliceDto() {
 
-        String sname = profileImg != null ? profileImg.getSName() : ""; // null 체크 추가
         return UserDto.builder()
-                .id(this.id)
                 .uid(this.uid)
-                .role(this.role)
-                .level(this.level)
                 .grade(this.grade)
-                .email(this.email)
-                .name(this.name)
-                .company(this.company)
-                .profileImg(sname)
-                .createAt(this.createAt)
+                .role(this.role)
+                .id(this.id)
                 .build();
     }
 
     public GetUsersAllDto toGetUsersAllDto (){
-        String levelString;
-        switch (level) {
-            case 1:
-                levelString = "사원";
-                break;
-            case 2:
-                levelString = "주임";
-                break;
-            case 3:
-                levelString = "대리";
-                break;
-            case 4:
-                levelString = "과장";
-                break;
-            case 5:
-                levelString = "차장";
-                break;
-            case 6:
-                levelString = "부장";
-                break;
-            default:
-                levelString = "외주";  // Handle unexpected levels
-                break;
-        }
         String group;
         if(!groupMappers.isEmpty()){
             group = groupMappers.get(0).getGroup().getName();
         } else {
             group = "소속없음";
         }
-        
         return GetUsersAllDto.builder()
                 .name(this.name)
                 .email(this.email)
@@ -271,36 +227,11 @@ public class User {
                 .group(group)
                 .uid(this.uid)
                 .id(this.id)
-                .level(levelString)
+                .level(this.selectLevelString())
                 .build();
     }
 
     public GetUsersAllDto toGetUsersAllDto (String group){
-        String levelString;
-        switch (level) {
-            case 1:
-                levelString = "사원";
-                break;
-            case 2:
-                levelString = "주임";
-                break;
-            case 3:
-                levelString = "대리";
-                break;
-            case 4:
-                levelString = "과장";
-                break;
-            case 5:
-                levelString = "차장";
-                break;
-            case 6:
-                levelString = "부장";
-                break;
-            default:
-                levelString = "외주";  // Handle unexpected levels
-                break;
-        }
-
         return GetUsersAllDto.builder()
                 .name(this.name)
                 .email(this.email)
@@ -308,7 +239,7 @@ public class User {
                 .group(group)
                 .uid(this.uid)
                 .id(this.id)
-                .level(levelString)
+                .level(this.selectLevelString())
                 .build();
     }
     public void updateCompanyCode(String companyCode) {
