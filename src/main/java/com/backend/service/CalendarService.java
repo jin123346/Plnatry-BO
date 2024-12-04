@@ -91,8 +91,7 @@ public class CalendarService {
         return ResponseEntity.ok(dtos);
     }
 
-    public ResponseEntity<?> getCalendarContentToday() {
-        Long userId = 9L;
+    public ResponseEntity<?> getCalendarContentToday(Long userId) {
         Optional<User> user = userRepository.findById(userId);
         if(user.isEmpty()){
             return ResponseEntity.badRequest().body("로그인 정보가 일치하지 않습니다...");
@@ -126,8 +125,7 @@ public class CalendarService {
         return ResponseEntity.ok(dtos);
     }
 
-    public ResponseEntity<?> postCalendarContent(PostCalendarContentDto dto) {
-        Long userId = 9L;
+    public ResponseEntity<?> postCalendarContent(PostCalendarContentDto dto,Long userId) {
         Optional<User> user = userRepository.findById(userId);
         if(user.isEmpty()){
             return ResponseEntity.badRequest().body("로그인 정보가 일치하지 않습니다...");
@@ -172,8 +170,7 @@ public class CalendarService {
         return ResponseEntity.ok().body("수정이 완료되었습니다.");
     }
 
-    public ResponseEntity<?> getCalendarContentAfternoon(String today) {
-        Long userId = 9L;
+    public ResponseEntity<?> getCalendarContentAfternoon(String today,Long userId) {
         Optional<User> user = userRepository.findById(userId);
         if(user.isEmpty()){
             return ResponseEntity.badRequest().body("로그인 정보가 일치하지않습니다...");
@@ -219,8 +216,7 @@ public class CalendarService {
         return ResponseEntity.ok(dtos);
     }
 
-    public ResponseEntity<?> getCalendarContentMorning(String today) {
-        Long userId = 9L;
+    public ResponseEntity<?> getCalendarContentMorning(String today,Long userId) {
         Optional<User> user = userRepository.findById(userId);
         if(user.isEmpty()){
             return ResponseEntity.badRequest().body("로그인 정보가 일치하지않습니다...");
@@ -339,8 +335,7 @@ public class CalendarService {
         return ResponseEntity.ok(map);
     }
 
-    public ResponseEntity<?> getCalendarByGroup(Long id) {
-        Long userId = 9L;
+    public ResponseEntity<?> getCalendarByGroup(Long id,Long userId) {
         Optional<User> user = userRepository.findById(userId);
         if(user.isEmpty()){
             return ResponseEntity.badRequest().body("로그인 정보가 일치하지않습니다.");
@@ -362,8 +357,7 @@ public class CalendarService {
         return ResponseEntity.ok(dtos);
     }
 
-    public ResponseEntity<?> putCalendar(PutCalendarDto dtos) {
-        Long myId = 9L;
+    public ResponseEntity<?> putCalendar(PutCalendarDto dtos,Long myId) {
         if(dtos.getStatus()==1){
             Optional<User> user = userRepository.findById(myId);
             if(user.isEmpty()){
