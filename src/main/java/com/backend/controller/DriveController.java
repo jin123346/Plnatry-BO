@@ -7,6 +7,7 @@ import com.backend.dto.request.drive.NewDriveRequest;
 import com.backend.dto.request.drive.RenameRequest;
 import com.backend.dto.response.drive.FolderDto;
 import com.backend.document.drive.Folder;
+import com.backend.dto.response.drive.FolderResponseDto;
 import com.backend.entity.user.User;
 import com.backend.service.*;
 import jakarta.servlet.http.HttpServletRequest;
@@ -107,29 +108,31 @@ public class DriveController {
         List<FolderDto> folderDtoList =  folderService.getFoldersByUid("worker1", rootFolder.getId());
         log.info("folderLIst!!!!"+folderDtoList);
 
-        return ResponseEntity.ok().body(folderDtoList);
+        FolderResponseDto folderResponseDto  = FolderResponseDto.builder()
+                .folderDtoList(folderDtoList)
+                .uid(uid)
+                .build();
+
+        return ResponseEntity.ok().body(folderResponseDto);
 
     }
 
 
     //각 폴더의 컨텐츠 가져오기
     @GetMapping("/folder-contents")
-    public ResponseEntity<Map<String, Object>> getFolderContents(@RequestParam String folderId,@RequestParam String ownerId){
+    public ResponseEntity<Map<String, Object>> getFolderContents(HttpServletRequest request,@RequestParam String folderId,@RequestParam(required = false) String ownerId){
         Map<String,Object> response = new HashMap<>();
         //폴더 가져오기
+        String uid = (String) request.getAttribute("uid");
         List<FolderDto> subFolders = folderService.getSubFolders(ownerId,folderId);
 
         //파일 가져오기
         List<FileRequestDto> files = folderService.getFiles(folderId);
 
-//        files.forEach(file -> {
-//            String remoteFilePath = file.getPath(); // SFTP 상의 원격 경로
-//            String thumbnailPath = thumbnailService.generateThumbnailIfNotExists(remoteFilePath, file.getSavedName());
-//            file.setThumbnailPath(thumbnailPath); // 썸네일 경로 설정
-//        });
 
         response.put("files",files);
         response.put("subFolders", subFolders);
+        response.put("uid",uid);
         log.info("subFolders:"+subFolders);
         log.info("files:"+files);
 
