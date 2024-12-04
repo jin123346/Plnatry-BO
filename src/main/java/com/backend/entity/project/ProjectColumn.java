@@ -20,7 +20,10 @@ public class ProjectColumn {
     private String title;
     private String color;
 
-    @OneToMany
+    @ManyToOne
+    private Project project;
+
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "columnId", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ProjectTask> tasks;
 
 }
