@@ -1,5 +1,6 @@
 package com.backend.entity.project;
 
+import com.backend.dto.response.project.GetProjectListDTO;
 import com.backend.entity.user.User;
 import jakarta.persistence.*;
 import lombok.*;
@@ -11,14 +12,16 @@ import org.springframework.data.annotation.PersistenceCreator;
 @Getter
 @Builder
 @Entity
-@Table(name = "project_member")
+@Table(name = "project_coworker")
 public class ProjectCoworker { //프로젝트별 멤버 권한
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "project_id")
-    private Long projectId;
+    @Setter
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "project_id")
+    private Project project;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
@@ -47,5 +50,14 @@ public class ProjectCoworker { //프로젝트별 멤버 권한
             canDeleteTask = true;
             canEditProject = false;
         }
+    }
+
+
+    public GetProjectListDTO toGetProjectListDTO() {
+        return GetProjectListDTO.builder()
+                .id(project.getId())
+                .title(project.getTitle())
+                .isOwner(isOwner)
+                .build();
     }
 }
