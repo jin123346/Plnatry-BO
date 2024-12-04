@@ -20,9 +20,6 @@ public class CardInfo {
     @Column(name = "card_active_status")
     private int activeStatus; // 기본등록카드
 
-    @Column(name = "payment_token")
-    private String paymentToken;
-
     @Column(name = "card_no")
     private String paymentCardNo; // 카드번호
 

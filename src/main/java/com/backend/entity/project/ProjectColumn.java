@@ -1,5 +1,6 @@
 package com.backend.entity.project;
 
+import com.backend.dto.response.project.GetProjectColumnDTO;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -20,7 +21,18 @@ public class ProjectColumn {
     private String title;
     private String color;
 
-    @OneToMany
+    @ManyToOne
+    private Project project;
+
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "columnId", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ProjectTask> tasks;
 
+    public GetProjectColumnDTO toGetProjectColumnDTO () {
+        return GetProjectColumnDTO.builder()
+                .id(id)
+                .title(title)
+                .color(color)
+                .tasks(tasks.stream().map(ProjectTask::toGetProjectTaskDTO).toList())
+                .build();
+    }
 }

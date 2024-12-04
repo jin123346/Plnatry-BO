@@ -1,8 +1,7 @@
 package com.backend.dto.response.drive;
 
 import com.backend.entity.folder.File;
-import com.backend.entity.folder.Folder;
-import com.backend.entity.user.User;
+import com.backend.document.drive.Folder;
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -34,4 +33,6 @@ public class FolderDto {
     private int isPinned=0;
     private String parentId;
     private String path;
+    private int size;
+    private String parentPath;
 }

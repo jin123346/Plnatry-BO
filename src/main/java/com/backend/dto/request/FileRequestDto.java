@@ -1,11 +1,7 @@
 package com.backend.dto.request;
 
-import com.backend.entity.folder.FileMogo;
-import com.backend.util.Status;
-import jakarta.persistence.Id;
+import com.backend.document.drive.FileMogo;
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
-import org.springframework.data.annotation.LastModifiedDate;
 
 import java.time.LocalDateTime;
 

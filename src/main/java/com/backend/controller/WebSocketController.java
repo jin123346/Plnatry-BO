@@ -1,21 +1,28 @@
 package com.backend.controller;
 
-import com.backend.dto.request.calendar.PutCalendarDto;
+import com.backend.dto.request.calendar.PostCalendarDto;
+import com.backend.dto.request.calendar.PutCalendarContentsDto;
+import com.backend.dto.request.calendar.PutContentMessageDto;
+import com.backend.dto.response.calendar.GetCalendarNameDto;
+import com.backend.dto.response.calendar.GetCalendarsDto;
+import com.backend.dto.response.calendar.GetMessagePostCalendarDto;
+import com.backend.entity.calendar.Calendar;
+import com.backend.entity.calendar.CalendarContent;
 import com.backend.entity.calendar.CalendarMapper;
 import com.backend.entity.user.User;
 import com.backend.repository.UserRepository;
+import com.backend.repository.calendar.CalendarContentRepository;
 import com.backend.repository.calendar.CalendarMapperRepository;
+import com.backend.repository.calendar.CalendarRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
-import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
-import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.*;
@@ -23,6 +30,7 @@ import java.util.*;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api")
+@Log4j2
 public class WebSocketController {
 
     private final SimpMessagingTemplate messagingTemplate;
@@ -30,20 +38,97 @@ public class WebSocketController {
     private final Map<String, List<String>> userCalendarSubscriptions = new HashMap<>(); // userId -> List<calendarId>
     private final UserRepository userRepository;
     private final CalendarMapperRepository calendarMapperRepository;
+    private final CalendarContentRepository calendarContentRepository;
+    private final CalendarRepository calendarRepository;
 
     @MessageMapping("/calendar/update")
-    public void updateCalendar(String message, String calendarId) {
-        System.out.println("==================12312312321==========================");
-        // 구독자 목록 가져오기
-        for (Map.Entry<String, List<String>> entry : userCalendarSubscriptions.entrySet()) {
-            String userId = entry.getKey();
-            List<String> subscribedCalendars = entry.getValue();
-
-            // 구독한 캘린더에 해당하는 사용자가 있을 경우 메시지 전송
-            if (subscribedCalendars.contains("19")) {
-                messagingTemplate.convertAndSend( "/topic/calendar/19", "{\"message\": \"Subscribed to calendar: " + 19 + "\"}");
-            }
+    @Transactional
+    public void updateCalendar(String calendarId) {
+        List<CalendarContent> contents = calendarContentRepository.findAllByCalendar_CalendarIdAndCalendar_StatusIsNot(Long.parseLong(calendarId),0);
+        Map<String, Object> map = new HashMap<>();
+        List<GetCalendarsDto> dtos = contents.stream().map(CalendarContent::toGetCalendarsDto).toList();
+        map.put("update", dtos);
+        System.out.println("sadkfljsakfjkdjsfalksajfaskdf");
+        Optional<Calendar> calendar = calendarRepository.findByCalendarIdAndCalendarContents_StatusIsNot(Long.parseLong(calendarId),0);
+        if(calendar.isPresent()) {
+            GetCalendarNameDto dto = calendar.get().toGetCalendarNameDto();
+            map.put("name", dto);
         }
+        System.out.println("sadkfljsakfjkdjsfalksajfaskdf");
+        System.out.println(map);
+        messagingTemplate.convertAndSend( "/topic/calendar/"+calendarId, map);
+    }
+
+    @MessageMapping("/calendar/delete")
+    @Transactional
+    public void deleteCalendar(String calendarId) {
+        List<CalendarContent> contents = calendarContentRepository.findAllByCalendar_CalendarIdAndCalendar_StatusIsNot(Long.parseLong(calendarId),0);
+        Map<String, Object> map = new HashMap<>();
+        List<GetCalendarsDto> dtos = contents.stream().map(CalendarContent::toGetCalendarsDto).toList();
+        map.put("delete", calendarId);
+
+        messagingTemplate.convertAndSend("/topic/calendar/"+calendarId, map);
+    }
+
+    @MessageMapping("/calendar/post")
+    @Transactional
+    public void postCalendar(@Payload String message) throws JsonProcessingException {
+        ObjectMapper objectMapper = new ObjectMapper();
+        GetCalendarNameDto messageMap = objectMapper.readValue(message, GetCalendarNameDto.class);
+        Map<String,Object> map = new HashMap<>();
+        List<Long> userIds = messageMap.getUserIds();
+        userIds.add(messageMap.getMyid());
+        GetMessagePostCalendarDto dto = GetMessagePostCalendarDto.builder()
+                .color(messageMap.getColor())
+                .name(messageMap.getName())
+                .status(messageMap.getStatus())
+                .id(messageMap.getId())
+                .build();
+        map.put("post",dto);
+        map.put("myid",messageMap.getMyid());
+        for (Long userId : userIds) {
+            messagingTemplate.convertAndSend("/topic/calendar/user/"+userId, map);
+        }
+    }
+
+    @MessageMapping("/calendar/contents/put")
+    @Transactional
+    public void putCalendarContents(@Payload String message) throws JsonProcessingException {
+        ObjectMapper objectMapper = new ObjectMapper();
+        PutCalendarContentsDto messageMap = objectMapper.readValue(message, PutCalendarContentsDto.class);
+        Optional<Calendar> calendar = calendarRepository.findByCalendarContents_CalendarContentId(messageMap.getContentId());
+        Long calendarId = calendar.get().getCalendarId();
+        Map<String, Object> map = new HashMap<>();
+        map.put("contentsPut",messageMap);
+        messagingTemplate.convertAndSend("/topic/calendar/"+calendarId, map);
+    }
+
+    @MessageMapping("/calendar/contents/put2")
+    public void putCalendarContents2(@Payload String message) throws JsonProcessingException {
+        ObjectMapper objectMapper = new ObjectMapper();
+        PutContentMessageDto messageMap = objectMapper.readValue(message, PutContentMessageDto.class);
+        Map<String,Object> map = new HashMap<>();
+        map.put("put2","put2");
+        messagingTemplate.convertAndSend("/topic/calendar/"+messageMap.getCalendarId(), map);
+        messagingTemplate.convertAndSend("/topic/calendar/"+messageMap.getPrevId(), map);
+    }
+
+    @MessageMapping("/calendar/contents/delete")
+    public void deleteCalendarContents(@Payload String message) throws JsonProcessingException {
+        ObjectMapper objectMapper = new ObjectMapper();
+        PutContentMessageDto messageMap = objectMapper.readValue(message, PutContentMessageDto.class);
+        Map<String,Object> map = new HashMap<>();
+        map.put("contentDelete","delete");
+        messagingTemplate.convertAndSend("/topic/calendar/"+messageMap.getCalendarId(), map);
+    }
+
+    @MessageMapping("/calendar/contents/post")
+    public void postCalendarContents(@Payload String message) throws JsonProcessingException {
+        ObjectMapper objectMapper = new ObjectMapper();
+        PutContentMessageDto messageMap = objectMapper.readValue(message, PutContentMessageDto.class);
+        Map<String,Object> map = new HashMap<>();
+        map.put("contentPost","post");
+        messagingTemplate.convertAndSend("/topic/calendar/"+messageMap.getCalendarId(), map);
     }
 
     // 특정 사용자가 캘린더를 구독
@@ -53,7 +138,6 @@ public class WebSocketController {
         Map<String, String> messageMap = objectMapper.readValue(jsonMessage, Map.class);
 
         String userId = messageMap.get("message");
-        System.out.println(userId);
         Optional<User> user = userRepository.findById(Long.parseLong(userId));
         if(user.isEmpty()){
             return;
@@ -68,11 +152,6 @@ public class WebSocketController {
         // 사용자가 구독할 캘린더 목록을 구독 처리
         userCalendarSubscriptions.put(userId, calendarIds);
 
-        // 해당 캘린더에 대한 구독을 추가 (캘린더별로 구독 설정)
-        for (String id : calendarIds) {
-            System.out.println(id);
-            messagingTemplate.convertAndSend( "/topic/calendar/" + id, "{\"message\": \"Subscribed to calendar: " + id + "\"}");
-        }
     }
 
     // 특정 사용자가 캘린더 구독을 취소

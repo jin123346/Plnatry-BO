@@ -2,6 +2,8 @@ package com.backend.dto.response.calendar;
 
 import lombok.*;
 
+import java.util.List;
+
 @AllArgsConstructor
 @NoArgsConstructor
 @ToString
@@ -13,4 +15,6 @@ public class GetCalendarNameDto {
     private String name;
     private Integer status;
     private String color;
+    private List<Long> userIds;
+    private Long myid;
 }

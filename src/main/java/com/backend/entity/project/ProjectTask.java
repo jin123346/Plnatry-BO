@@ -1,5 +1,6 @@
 package com.backend.entity.project;
 
+import com.backend.dto.response.project.GetProjectTaskDTO;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -28,8 +29,7 @@ public class ProjectTask {
 
     private int status; // 완료, 미완료
 
-    private LocalDate dueDate; // 마감일
-    private int position; // 보드 내 위치
+    private LocalDate duedate; // 마감일
 
     @OneToMany
     private List<ProjectSubTask> subTasks;
@@ -38,5 +38,17 @@ public class ProjectTask {
     private List<ProjectComment> comments;
 
     @OneToMany(mappedBy = "task", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<TaskTag> taskTags = new ArrayList<>();
+    private List<TaskTag> tags = new ArrayList<>();
+
+    public GetProjectTaskDTO toGetProjectTaskDTO() {
+        return GetProjectTaskDTO.builder()
+                .id(id)
+                .columnId(columnId)
+                .title(title)
+                .content(content)
+                .priority(priority)
+                .status(status)
+                .duedate(duedate)
+                .build();
+    }
 }
