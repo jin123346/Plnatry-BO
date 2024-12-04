@@ -2,7 +2,6 @@ package com.backend.service;
 
 import com.backend.dto.request.project.PostProjectDTO;
 import com.backend.dto.response.project.GetProjectDTO;
-import com.backend.dto.response.project.GetProjectListDTO;
 import com.backend.dto.response.user.GetUsersAllDto;
 import com.backend.entity.project.Project;
 import com.backend.entity.project.ProjectCoworker;
