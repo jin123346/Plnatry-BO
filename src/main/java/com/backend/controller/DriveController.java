@@ -105,12 +105,15 @@ public class DriveController {
         if (rootFolder == null) {
             return ResponseEntity.ok().body("No folders found.");
         }
-        List<FolderDto> folderDtoList =  folderService.getFoldersByUid("worker1", rootFolder.getId());
+        List<FolderDto> folderDtoList =  folderService.getFoldersByUid(uid, rootFolder.getId());
         log.info("folderLIst!!!!"+folderDtoList);
+        long size = sftpService.calculatedSize(uid);
+
 
         FolderResponseDto folderResponseDto  = FolderResponseDto.builder()
                 .folderDtoList(folderDtoList)
                 .uid(uid)
+                .size(size)
                 .build();
 
         return ResponseEntity.ok().body(folderResponseDto);
@@ -124,7 +127,7 @@ public class DriveController {
         Map<String,Object> response = new HashMap<>();
         //폴더 가져오기
         String uid = (String) request.getAttribute("uid");
-        List<FolderDto> subFolders = folderService.getSubFolders(ownerId,folderId);
+        List<FolderDto> subFolders = folderService.getSubFolders(uid,folderId);
 
         //파일 가져오기
         List<FileRequestDto> files = folderService.getFiles(folderId);

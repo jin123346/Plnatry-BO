@@ -13,4 +13,5 @@ import java.util.List;
 public class FolderResponseDto {
     private String uid;
     private List<FolderDto> folderDtoList;
+    private long size;
 }
