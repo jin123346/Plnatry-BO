@@ -13,7 +13,9 @@ import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
@@ -55,8 +57,16 @@ public class CalendarController {
 
     @GetMapping("/calendar/name")
     public ResponseEntity<?> getCalendarName (
+            HttpServletRequest req
     ){
-        ResponseEntity<?> response = calendarService.getCalendarName(9L);
+        Object idObj = req.getAttribute("id");
+        Long id;
+        if (idObj != null) {
+            id = Long.valueOf(idObj.toString());  // 문자열을 Long으로 변환
+        } else {
+            id= 0L;
+        }
+        ResponseEntity<?> response = calendarService.getCalendarName(id);
         return response;
     }
 
@@ -65,14 +75,18 @@ public class CalendarController {
             @RequestParam(value = "calendarId",defaultValue = "0") Long calendarId,
             HttpServletRequest req
     ){
-
-        if(calendarId==0){
-            ResponseEntity<?> response = calendarService.getCalendar();
-            return response;
+        System.out.println("sdfsdf");
+        Object idObj = req.getAttribute("id");
+        Long id;
+        if (idObj != null) {
+            id = Long.valueOf(idObj.toString());  // 문자열을 Long으로 변환
         } else {
-            ResponseEntity<?> response = calendarService.getCalendarByCalendarId(calendarId);
-            return response;
+            id= 0L;
         }
+        System.out.println("dd?");
+        ResponseEntity<?> response = calendarService.getCalendar(id);
+        return response;
+
     }
 
     @PutMapping("/calendar/contents")
@@ -132,4 +146,18 @@ public class CalendarController {
         return response;
     }
 
+    @GetMapping("/calendar/groups")
+    public ResponseEntity<?> getCalendarGroups (
+            HttpServletRequest req
+    ){
+        Object idObj = req.getAttribute("id");
+        Long id;
+        if (idObj != null) {
+            id = Long.valueOf(idObj.toString());  // 문자열을 Long으로 변환
+        } else {
+           id= 0L;
+        }
+        ResponseEntity<?> response = calendarService.getGroupIds(id);
+        return response;
+    }
 }

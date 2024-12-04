@@ -16,7 +16,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void configureMessageBroker(MessageBrokerRegistry config) {
         config.enableSimpleBroker("/topic"); // 브로드캐스트용
-        config.setApplicationDestinationPrefixes("/app"); // 클라이언트에서 보낼 때 사용할 prefix
+        config.setApplicationDestinationPrefixes("/app"); // 클라이언트에서 보낼 때 사용할 prefi
     }
 
     @Override

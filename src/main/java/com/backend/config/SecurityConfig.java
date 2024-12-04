@@ -90,8 +90,12 @@ public class SecurityConfig implements WebMvcConfigurer {
         @Override
         protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
                 throws ServletException, IOException {
+            if (request.getRequestURI().startsWith("/ws/")) {
+                filterChain.doFilter(request, response);
+                return;
+            }
+
             String token = extractTokenFromHeader(request);
-            System.out.println("===123123=");
 
             log.info("헤더에서 토큰을 잘 뽑는디 확인 "+token);
             System.out.println(token);
@@ -103,13 +107,13 @@ public class SecurityConfig implements WebMvcConfigurer {
                     AuthenticateDto auth = authenticateWithToken(token);
                     request.setAttribute("uid",auth.getUid());
                     request.setAttribute("role",auth.getRole());
+                    request.setAttribute("id", auth.getId());
                 }else {
                     log.info("토큰 없따");
                 }
             } catch (Exception e) {
                 SecurityContextHolder.clearContext(); // Clear context on failure
                 response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid or expired token");
-                return;
             }
 
             filterChain.doFilter(request, response);
@@ -124,9 +128,10 @@ public class SecurityConfig implements WebMvcConfigurer {
             Claims claims = jwtTokenProvider.getClaims(token);
             String username = claims.getSubject();
             String role = claims.get("role", String.class);
-
+            Long id = claims.get("id",Long.class);
             log.info("토큰에서 추출한 사용자명: {}", username);
             log.info("토큰에서 추출한 역할: {}", role);
+            log.info("토큰아이디추출: {}", id);
 
             if (username == null || role == null) {
                 log.error("사용자명 또는 역할이 null입니다. 토큰: {}", token);
@@ -139,6 +144,7 @@ public class SecurityConfig implements WebMvcConfigurer {
 
             SecurityContextHolder.getContext().setAuthentication(authentication);
             AuthenticateDto auth = AuthenticateDto.builder()
+                    .id(id)
                     .uid(username)
                     .role(role)
                     .build();
