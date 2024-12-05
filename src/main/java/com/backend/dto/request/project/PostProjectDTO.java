@@ -21,6 +21,8 @@ public class PostProjectDTO {
     private int type; // 부서내부, 회사내부, 협력, 공개
     private List<GetUsersAllDto> coworkers;
 
+    private String template;
+
     private List<ProjectCoworker> coworkerEntities;
 
     public Project toProject() {
