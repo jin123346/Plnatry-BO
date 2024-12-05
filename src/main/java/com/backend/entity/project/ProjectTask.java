@@ -37,8 +37,8 @@ public class ProjectTask {
     @OneToMany
     private List<ProjectComment> comments;
 
-    @OneToMany(mappedBy = "task", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<TaskTag> tags = new ArrayList<>();
+//    @OneToMany(mappedBy = "task", cascade = CascadeType.ALL, orphanRemoval = true)
+//    private List<TaskTag> tags = new ArrayList<>();
 
     public GetProjectTaskDTO toGetProjectTaskDTO() {
         return GetProjectTaskDTO.builder()
