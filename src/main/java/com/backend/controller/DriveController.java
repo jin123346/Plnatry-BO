@@ -52,7 +52,7 @@ public class DriveController {
                     .build();
             String rootId =folderService.createRootDrive(rootdrive);
             newDriveRequest.setParentId(rootId);
-            permissionService.createPermission(rootId,currentUser);
+            permissionService.addPermission(rootId,currentUser.getUid(),"folder",newDriveRequest.getPermissions());
         }else{
             newDriveRequest.setParentId(forFolder.getId());
         }
@@ -61,7 +61,6 @@ public class DriveController {
         String forderId = folderService.createDrive(newDriveRequest);
 
         //권한설정 저장
-        permissionService.createPermission(forderId,currentUser);
 
 
     }
@@ -81,7 +80,7 @@ public class DriveController {
         String folderId = folderService.createDrive(newDriveRequest);
 
         //권한설정 저장
-        permissionService.createPermission(folderId,currentUser);
+        permissionService.addPermission(folderId,currentUser.getUid(),"folder",newDriveRequest.getPermissions());
 
 
     }
