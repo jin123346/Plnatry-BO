@@ -1,13 +1,19 @@
 package com.backend.service;
 
 import com.backend.dto.request.project.PostProjectDTO;
+import com.backend.dto.response.project.GetProjectColumnDTO;
 import com.backend.dto.response.project.GetProjectDTO;
+import com.backend.dto.response.project.GetProjectTaskDTO;
 import com.backend.dto.response.user.GetUsersAllDto;
 import com.backend.entity.project.Project;
+import com.backend.entity.project.ProjectColumn;
 import com.backend.entity.project.ProjectCoworker;
+import com.backend.entity.project.ProjectTask;
 import com.backend.entity.user.User;
+import com.backend.repository.project.ProjectColumnRepository;
 import com.backend.repository.project.ProjectCoworkerRepository;
 import com.backend.repository.project.ProjectRepository;
+import com.backend.repository.project.ProjectTaskRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
@@ -24,7 +30,7 @@ import java.util.stream.Collectors;
     작업내용 : 프로젝트 생성
 
     수정이력
-        - 2024/12/04 김주경 - 코드 간편화
+        - 2024/12/04 김주경 - 코드 간편화, 프로젝트 불러오기
 
  */
 
@@ -36,6 +42,8 @@ public class ProjectService {
     private final UserService userService;
     private final ProjectRepository projectRepository;
     private final ProjectCoworkerRepository coworkerRepository;
+    private final ProjectColumnRepository columnRepository;
+    private final ProjectTaskRepository taskRepository;
 
     public Project createProject(PostProjectDTO postDTO, String username) {
 
@@ -85,5 +93,24 @@ public class ProjectService {
         }
         return null;
     }
+
+    public ProjectColumn addColumn(GetProjectColumnDTO columnDTO, Long projectId) {
+        return columnRepository.save(columnDTO.toEntityAddProject(projectId));
+    }
+
+    public ProjectTask saveTask(GetProjectTaskDTO taskDTO) {
+        return taskRepository.save(taskDTO.toProjectTask());
+    }
+
+    public Project updateCoworker(GetProjectDTO dto, Long projectId) {
+        Optional<Project> optProject = projectRepository.findById(projectId);
+        if (optProject.isPresent()) {
+            Project project = optProject.get();
+            project.setCoworkers(dto.getCoworkersEntity());
+            return projectRepository.save(project);
+        }
+        return null;
+    }
+
 
 }

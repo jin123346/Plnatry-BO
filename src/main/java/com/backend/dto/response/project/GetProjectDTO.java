@@ -1,11 +1,8 @@
 package com.backend.dto.response.project;
 
-import com.backend.entity.project.ProjectColumn;
 import com.backend.entity.project.ProjectCoworker;
-import jakarta.persistence.*;
 import lombok.*;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @Data
@@ -22,5 +19,7 @@ public class GetProjectDTO {
     private List<GetProjectCoworkerDTO> coworkers;
     private List<GetProjectColumnDTO> columns;
 
-
+    public List<ProjectCoworker> getCoworkersEntity() {
+        return coworkers.stream().map(GetProjectCoworkerDTO::toProjectCoworker).toList();
+    }
 }
