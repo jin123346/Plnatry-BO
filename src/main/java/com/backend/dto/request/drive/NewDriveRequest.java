@@ -2,6 +2,7 @@ package com.backend.dto.request.drive;
 
 
 import com.backend.dto.response.drive.FolderDto;
+import com.backend.util.PermissionType;
 import lombok.*;
 
 import java.util.List;
@@ -24,6 +25,7 @@ public class NewDriveRequest {
     private int linkSharing;  // 링크 공유 (0: 허용안함, 1: 허용함)
     private String parentId;
     private int status;
+    private List<PermissionType> permissions;
 
     private FolderDto parentFolder;
 }
