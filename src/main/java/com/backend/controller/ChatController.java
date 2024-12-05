@@ -1,7 +1,9 @@
 package com.backend.controller;
 
 import com.backend.document.chat.ChatMemberDocument;
+import com.backend.document.chat.ChatMessageDocument;
 import com.backend.document.chat.ChatRoomDocument;
+import com.backend.dto.chat.ChatMessageDTO;
 import com.backend.dto.chat.ChatRoomDTO;
 import com.backend.entity.user.User;
 import com.backend.service.ChatService;
@@ -11,6 +13,9 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.http.ResponseEntity;
+import org.springframework.messaging.handler.annotation.MessageMapping;
+import org.springframework.messaging.handler.annotation.Payload;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -27,6 +32,7 @@ public class ChatController {
     private final ChatService chatService;
     private final UserService userService;
     private final GroupService groupService;
+    private final SimpMessagingTemplate messagingTemplate;
 
     @GetMapping("/room/{userUid}") // 유저 uid로 해당 유저가 속한 모든 채팅방 조회
     public ResponseEntity<?> getAllChatRooms(@PathVariable String userUid) {
@@ -98,18 +104,49 @@ public class ChatController {
     }
 
     @PatchMapping("/frequentMembers")
-    public ResponseEntity<?> updateFrequentMembers(@RequestParam("uid") String uid, @RequestParam("frequentUid") String frequentUid) {
-        log.info("uid = " + uid + " frequentUid = " + frequentUid);
+    public ResponseEntity<?> updateFrequentMembers(
+            @RequestParam("uid") String uid,
+            @RequestParam("frequentUid") String frequentUid,
+            @RequestParam("type") String type) {
+
+        log.info("uid = " + uid + " frequentUid = " + frequentUid + " type = " + type);
 
         String email = userService.getUserByuid(uid).getEmail();
 
         ChatMemberDocument frequentMember = chatService.findChatMember(frequentUid);
 
-        ChatMemberDocument savedDocument = chatService.updateChatMemberFavorite(email, frequentMember);
+        String status = chatService.updateChatMemberFavorite(email, frequentMember, type);
+        return ResponseEntity.ok(status);
+    }
+
+    @PostMapping("/saveMessage")
+    public ResponseEntity<String> saveMessage(@RequestBody ChatMessageDTO chatMessageDTO) {
+        log.info("chatMessageDTO = " + chatMessageDTO);
+        ChatMessageDocument savedDocument = chatService.saveMessage(chatMessageDTO);
         if (savedDocument != null) {
             return ResponseEntity.ok("success");
-        } else {
-            return ResponseEntity.ok("error");
         }
+        return ResponseEntity.ok("failure");
     }
+
+    @GetMapping("/getMessage/{roomId}")
+    public ResponseEntity<?> getMessage(@PathVariable("roomId") String roomId) {
+        log.info("roomId = " + roomId);
+        List<ChatMessageDTO> chatMessageDTOS = chatService.getAllMessagesByChatRoomId(roomId);
+        if (!chatMessageDTOS.isEmpty()) {
+            return ResponseEntity.ok(chatMessageDTOS);
+        }
+        return ResponseEntity.noContent().build();
+    }
+
+    @MessageMapping("/chat.sendMessage")
+    public void sendMessage(@Payload ChatMessageDTO chatMessageDTO) {
+
+        ChatMessageDocument chatMessageDocument = chatMessageDTO.toDocument();
+        log.info("chatMessageDocument = " + chatMessageDocument);
+
+        // 메시지를 해당 채팅방의 구성원들에게 브로드캐스트
+        messagingTemplate.convertAndSend("/topic/chat" + chatMessageDocument.getRoomId(), chatMessageDocument);
+    }
+
 }
