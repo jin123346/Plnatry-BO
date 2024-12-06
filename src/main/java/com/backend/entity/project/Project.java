@@ -1,5 +1,6 @@
 package com.backend.entity.project;
 
+import com.backend.dto.response.admin.project.GetProjectLeaderDto;
 import com.backend.dto.response.project.GetProjectDTO;
 import com.backend.dto.response.project.GetProjectListDTO;
 import jakarta.persistence.*;
@@ -25,10 +26,15 @@ public class Project { //프로젝트
     private int status; // 대기중, 진행중, 완료, 삭제
 
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude
     private List<ProjectCoworker> coworkers;
 
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude
     private List<ProjectColumn> columns;
+
+    @Column(name = "project_progress")
+    private Integer projectProgress;
 
     public void addCoworker(ProjectCoworker coworker) {
         if(this.coworkers == null) {this.coworkers = new ArrayList<>();}
@@ -44,6 +50,24 @@ public class Project { //프로젝트
                 .columns(columns.stream().map(ProjectColumn::toGetProjectColumnDTO).toList())
                 .coworkers(coworkers.stream().map(ProjectCoworker::toGetCoworkerDTO).toList())
                 .build();
+    }
+
+    public String selectStatus(){
+        return switch (status) {
+            case 1 -> "대기중";
+            case 2 -> "진행중";
+            default -> "완료";
+        };
+    }
+
+    public String selectType(){
+        return switch (type) {
+            case 1 -> "부서";
+            case 2 -> "회사";
+            case 3 -> "협력";
+            case 4 -> "팀";
+            default -> "공개";
+        };
     }
 
 }
