@@ -1,5 +1,11 @@
 package com.backend.controller;
 
+/*
+    날짜 : 2024-12-15
+    수정자 및 수정사항
+    - 전규찬 : 채팅용 메서드 추가 (12.05)
+*/
+
 import com.backend.dto.request.calendar.PostCalendarDto;
 import com.backend.dto.request.calendar.PutCalendarContentsDto;
 import com.backend.dto.request.calendar.PutContentMessageDto;
@@ -163,4 +169,8 @@ public class WebSocketController {
         }
         System.out.println(userId + " has unsubscribed from calendar " + calendarId);
     }
+
+
+
+
 }

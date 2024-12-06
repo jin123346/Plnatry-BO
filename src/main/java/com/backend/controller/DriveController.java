@@ -7,6 +7,7 @@ import com.backend.dto.request.drive.NewDriveRequest;
 import com.backend.dto.request.drive.RenameRequest;
 import com.backend.dto.response.drive.FolderDto;
 import com.backend.document.drive.Folder;
+import com.backend.dto.response.drive.FolderResponseDto;
 import com.backend.entity.user.User;
 import com.backend.service.*;
 import jakarta.servlet.http.HttpServletRequest;
@@ -51,7 +52,7 @@ public class DriveController {
                     .build();
             String rootId =folderService.createRootDrive(rootdrive);
             newDriveRequest.setParentId(rootId);
-            permissionService.createPermission(rootId,currentUser);
+            permissionService.addPermission(rootId,currentUser.getUid(),"folder",newDriveRequest.getPermissions());
         }else{
             newDriveRequest.setParentId(forFolder.getId());
         }
@@ -60,7 +61,6 @@ public class DriveController {
         String forderId = folderService.createDrive(newDriveRequest);
 
         //권한설정 저장
-        permissionService.createPermission(forderId,currentUser);
 
 
     }
@@ -80,7 +80,7 @@ public class DriveController {
         String folderId = folderService.createDrive(newDriveRequest);
 
         //권한설정 저장
-        permissionService.createPermission(folderId,currentUser);
+        permissionService.addPermission(folderId,currentUser.getUid(),"folder",newDriveRequest.getPermissions());
 
 
     }
@@ -104,32 +104,37 @@ public class DriveController {
         if (rootFolder == null) {
             return ResponseEntity.ok().body("No folders found.");
         }
-        List<FolderDto> folderDtoList =  folderService.getFoldersByUid("worker1", rootFolder.getId());
+        List<FolderDto> folderDtoList =  folderService.getFoldersByUid(uid, rootFolder.getId());
         log.info("folderLIst!!!!"+folderDtoList);
+        long  result  = sftpService.calculatedSize(uid);
 
-        return ResponseEntity.ok().body(folderDtoList);
+
+        FolderResponseDto folderResponseDto  = FolderResponseDto.builder()
+                .folderDtoList(folderDtoList)
+                .uid(uid)
+                .size(result)
+                .build();
+
+        return ResponseEntity.ok().body(folderResponseDto);
 
     }
 
 
     //각 폴더의 컨텐츠 가져오기
     @GetMapping("/folder-contents")
-    public ResponseEntity<Map<String, Object>> getFolderContents(@RequestParam String folderId,@RequestParam String ownerId){
+    public ResponseEntity<Map<String, Object>> getFolderContents(HttpServletRequest request,@RequestParam String folderId,@RequestParam(required = false) String ownerId){
         Map<String,Object> response = new HashMap<>();
         //폴더 가져오기
-        List<FolderDto> subFolders = folderService.getSubFolders(ownerId,folderId);
+        String uid = (String) request.getAttribute("uid");
+        List<FolderDto> subFolders = folderService.getSubFolders(uid,folderId);
 
         //파일 가져오기
         List<FileRequestDto> files = folderService.getFiles(folderId);
 
-//        files.forEach(file -> {
-//            String remoteFilePath = file.getPath(); // SFTP 상의 원격 경로
-//            String thumbnailPath = thumbnailService.generateThumbnailIfNotExists(remoteFilePath, file.getSavedName());
-//            file.setThumbnailPath(thumbnailPath); // 썸네일 경로 설정
-//        });
 
         response.put("files",files);
         response.put("subFolders", subFolders);
+        response.put("uid",uid);
         log.info("subFolders:"+subFolders);
         log.info("files:"+files);
 
@@ -200,6 +205,21 @@ public class DriveController {
         folderService.uploadFiles(files,folderId,maxOrder,uid);
 
         return null;
+    }
+
+    //zip파일 생성하기
+    @GetMapping("/generateZip/{folderId}")
+    public ResponseEntity downloadFile(@PathVariable String folderId){
+        log.info("Download file:"+folderId);
+        Map<String,Object> response = new HashMap<>();
+        String result = folderService.makeZipfolder(folderId);
+
+        if(result != null){
+            response.put("zipName",result);
+            return ResponseEntity.ok().body(response);
+        }else{
+            return ResponseEntity.status(HttpStatus.EXPECTATION_FAILED).body("Folder Zip failed");
+        }
     }
 
 

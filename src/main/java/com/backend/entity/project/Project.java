@@ -25,13 +25,14 @@ public class Project { //프로젝트
     private int type; // 부서내부, 회사내부, 협력, 공개
     private int status; // 대기중, 진행중, 완료, 삭제
 
+    @Setter
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
     @ToString.Exclude
-    private List<ProjectCoworker> coworkers;
+    private List<ProjectCoworker> coworkers = new ArrayList<>();
 
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
     @ToString.Exclude
-    private List<ProjectColumn> columns;
+    private List<ProjectColumn> columns = new ArrayList<>();
 
     @Column(name = "project_progress")
     private Integer projectProgress;
@@ -44,6 +45,7 @@ public class Project { //프로젝트
 
     public GetProjectDTO toGetProjectDTO() {
         return GetProjectDTO.builder()
+                .id(id)
                 .title(title)
                 .type(type)
                 .status(status)

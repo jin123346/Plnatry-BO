@@ -4,21 +4,27 @@ import com.backend.dto.request.project.PostProjectDTO;
 import com.backend.dto.response.admin.project.GetProjectLeaderDetailDto;
 import com.backend.dto.response.admin.project.GetProjectLeaderDto;
 import com.backend.dto.response.admin.project.GetProjects;
+import com.backend.dto.response.project.GetProjectColumnDTO;
 import com.backend.dto.response.project.GetProjectDTO;
+import com.backend.dto.response.project.GetProjectTaskDTO;
 import com.backend.dto.response.user.GetUsersAllDto;
 import com.backend.entity.calendar.Calendar;
 import com.backend.entity.calendar.CalendarMapper;
 import com.backend.entity.group.Group;
 import com.backend.entity.group.GroupLeader;
 import com.backend.entity.project.Project;
+import com.backend.entity.project.ProjectColumn;
 import com.backend.entity.project.ProjectCoworker;
+import com.backend.entity.project.ProjectTask;
 import com.backend.entity.user.User;
 import com.backend.repository.GroupLeaderRepository;
 import com.backend.repository.GroupRepository;
 import com.backend.repository.UserRepository;
 import com.backend.repository.calendar.CalendarMapperRepository;
+import com.backend.repository.project.ProjectColumnRepository;
 import com.backend.repository.project.ProjectCoworkerRepository;
 import com.backend.repository.project.ProjectRepository;
+import com.backend.repository.project.ProjectTaskRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.http.ResponseEntity;
@@ -36,7 +42,7 @@ import java.util.stream.Collectors;
     작업내용 : 프로젝트 생성
 
     수정이력
-        - 2024/12/04 김주경 - 코드 간편화
+        - 2024/12/04 김주경 - 코드 간편화, 프로젝트 불러오기
 
  */
 
@@ -52,6 +58,8 @@ public class ProjectService {
     private final UserRepository userRepository;
     private final GroupLeaderRepository groupLeaderRepository;
     private final CalendarMapperRepository calendarMapperRepository;
+    private final ProjectColumnRepository columnRepository;
+    private final ProjectTaskRepository taskRepository;
 
     public Project createProject(PostProjectDTO postDTO, String username) {
 
@@ -185,5 +193,23 @@ public class ProjectService {
         }
 
         return ResponseEntity.ok(getProjectLeaderDetailDto);
+    }
+
+    public ProjectColumn addColumn(GetProjectColumnDTO columnDTO, Long projectId) {
+        return columnRepository.save(columnDTO.toEntityAddProject(projectId));
+    }
+
+    public ProjectTask saveTask(GetProjectTaskDTO taskDTO) {
+        return taskRepository.save(taskDTO.toProjectTask());
+    }
+
+    public Project updateCoworker(GetProjectDTO dto, Long projectId) {
+        Optional<Project> optProject = projectRepository.findById(projectId);
+        if (optProject.isPresent()) {
+            Project project = optProject.get();
+            project.setCoworkers(dto.getCoworkersEntity());
+            return projectRepository.save(project);
+        }
+        return null;
     }
 }

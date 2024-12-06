@@ -125,6 +125,9 @@ public class FolderService {
                         .id(folder.getId())
                         .name(folder.getName())
                         .order(folder.getOrder())
+                        .ownerId(folder.getOwnerId())
+                        .description(folder.getDescription())
+                        .path(folder.getPath())
                         .createdAt(folder.getCreatedAt())
                         .isShared(folder.getIsShared())
                         .isPinned(folder.getIsPinned())
@@ -352,6 +355,24 @@ public class FolderService {
 
         }
         return false;
+    }
+
+
+    //zip파일 생성
+    public String makeZipfolder(String folderId){
+
+        Optional<Folder> opt = folderMogoRepository.findById(folderId);
+
+        if(opt.isPresent()){
+            Folder folder = opt.get();
+            boolean result = sftpService.makeZip(folder.getPath(), folder.getName());
+            if(result){
+                return folder.getName()+".zip";
+            }
+
+            return null;
+        }
+        return null;
     }
 
 
