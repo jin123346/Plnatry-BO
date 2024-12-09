@@ -1,7 +1,9 @@
 package com.backend.controller;
 
 
+import com.backend.document.drive.FileMogo;
 import com.backend.dto.request.FileRequestDto;
+import com.backend.dto.request.drive.DeletedRequest;
 import com.backend.dto.request.drive.MoveFolderRequest;
 import com.backend.dto.request.drive.NewDriveRequest;
 import com.backend.dto.request.drive.RenameRequest;
@@ -10,12 +12,16 @@ import com.backend.document.drive.Folder;
 import com.backend.dto.response.drive.FolderResponseDto;
 import com.backend.entity.user.User;
 import com.backend.service.*;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.HashMap;
@@ -36,37 +42,43 @@ public class DriveController {
     private final SftpService sftpService;
     private final ThumbnailService thumbnailService;
 
+
+    //드라이브생성 => 제일 큰 폴더
     @PostMapping("/newDrive")
     public void createDrive(@RequestBody NewDriveRequest newDriveRequest,HttpServletRequest request) {
         log.info("New drive request: " + newDriveRequest);
         String uid= (String) request.getAttribute("uid");
         newDriveRequest.setOwner(uid);
-        User currentUser = userService.getUserByuid(newDriveRequest.getOwner());
-        Folder forFolder = folderService.getFolderName(currentUser.getUid());
+        Folder forFolder = folderService.getFolderName(uid);
+
+        //부모폴더생성
         if(forFolder == null) {
             NewDriveRequest rootdrive = NewDriveRequest.builder()
                     .owner(newDriveRequest.getOwner())
-                    .name(currentUser.getUid())
-                    .driveMaster(currentUser.getUid())
-                    .description(currentUser.getUid()+"의 드라이브")
+                    .name(uid)
+                    .type("ROOT")
+                    .driveMaster(uid)
+                    .description(uid+"의 드라이브")
                     .build();
             String rootId =folderService.createRootDrive(rootdrive);
             newDriveRequest.setParentId(rootId);
-            permissionService.createPermission(rootId,currentUser);
+            permissionService.addPermission(rootId,uid,"folder",newDriveRequest.getPermissions());
         }else{
             newDriveRequest.setParentId(forFolder.getId());
         }
 
         //폴더생성
-        String forderId = folderService.createDrive(newDriveRequest);
+
+        newDriveRequest.setType("DRIVE");
+        String forderId = folderService.createFolder(newDriveRequest);
 
         //권한설정 저장
-        permissionService.createPermission(forderId,currentUser);
 
 
     }
 
 
+    //드라이브 안의 폴더 생성
     @PostMapping("/newFolder")
     public void createFolder(@RequestBody NewDriveRequest newDriveRequest,HttpServletRequest request) {
         log.info("New drive request: " + newDriveRequest);
@@ -76,12 +88,11 @@ public class DriveController {
 
         FolderDto folderDto = folderService.getParentFolder(newDriveRequest.getParentId());
         newDriveRequest.setParentFolder(folderDto);
-        User currentUser = userService.getUserByuid(newDriveRequest.getOwner());
-
-        String folderId = folderService.createDrive(newDriveRequest);
+        newDriveRequest.setType("FOLDER");
+        String folderId = folderService.createFolder(newDriveRequest);
 
         //권한설정 저장
-        permissionService.createPermission(folderId,currentUser);
+        permissionService.addPermission(folderId,uid,"folder",newDriveRequest.getPermissions());
 
 
     }
@@ -107,13 +118,13 @@ public class DriveController {
         }
         List<FolderDto> folderDtoList =  folderService.getFoldersByUid(uid, rootFolder.getId());
         log.info("folderLIst!!!!"+folderDtoList);
-        long size = sftpService.calculatedSize(uid);
+        long  result  = sftpService.calculatedSize(uid);
 
 
         FolderResponseDto folderResponseDto  = FolderResponseDto.builder()
                 .folderDtoList(folderDtoList)
                 .uid(uid)
-                .size(size)
+                .size(result)
                 .build();
 
         return ResponseEntity.ok().body(folderResponseDto);
@@ -160,11 +171,10 @@ public class DriveController {
         String id = renameRequest.getId();
         String type = renameRequest.getType();
         String newName = renameRequest.getNewName();
-        System.out.println("ID: " + id + ", Type: " + type + ", New Name: " + newName);
+        log.info("ID: " + id + ", Type: " + type + ", New Name: " + newName);
 
         if(type.equals("folder")){
             folderService.reNameFolder(renameRequest);
-
         }else if(type.equals("file")){
             folderService.reNameFile(id, newName);
         }
@@ -195,32 +205,177 @@ public class DriveController {
     // 파일 업로드 처리
     @PostMapping("/upload/{folderId}")
     public ResponseEntity<?> uploadFiles( @PathVariable String folderId,
-                                          @RequestParam("file") List<MultipartFile> files,
+                                          @RequestParam("files") List<MultipartFile> files,
+                                          @RequestParam("relativePaths") String relativePathsJson, // JSON 문자열로 받아옴
                                           @RequestParam("maxOrder") double maxOrder,
                                           @RequestParam("uid") String uid
     )  {
+        ObjectMapper objectMapper = new ObjectMapper();
+        List<String> relativePaths = null;
+        try {
+            relativePaths = objectMapper.readValue(relativePathsJson, new TypeReference<List<String>>() {});
 
-        log.info("Upload files"+files);
-        log.info("folderId:"+folderId);
+            log.info("Upload files"+files);
+            log.info("folderId:"+folderId);
+            log.info("relativePaths:"+relativePaths);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
 
-        folderService.uploadFiles(files,folderId,maxOrder,uid);
 
+
+//        try {
+//            folderService.uploadFiles(files, folderId, maxOrder, uid);
+//            return ResponseEntity.ok("파일 업로드 성공");
+//        } catch (MaxUploadSizeExceededException e) {
+//            log.error("파일 크기 초과: {}", e.getMessage());
+//            return ResponseEntity
+//                    .status(HttpStatus.BAD_REQUEST)
+//                    .body("파일 크기가 허용된 최대 크기를 초과했습니다.");
+//        } catch (Exception e) {
+//            log.error("파일 업로드 중 오류 발생: {}", e.getMessage());
+//            return ResponseEntity
+//                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+//                    .body("파일 업로드 중 오류가 발생했습니다. 다시 시도해주세요.");
+//        }
         return null;
+
+    }
+
+    //zip파일 생성하기
+    @GetMapping("/generateZip/{folderId}")
+    public ResponseEntity downloadFile(@PathVariable String folderId){
+        log.info("Download file:"+folderId);
+        Map<String,Object> response = new HashMap<>();
+        String result = folderService.makeZipfolder(folderId);
+
+        if(result != null){
+            response.put("zipName",result);
+            return ResponseEntity.ok().body(response);
+        }else{
+            return ResponseEntity.status(HttpStatus.EXPECTATION_FAILED).body("Folder Zip failed");
+        }
     }
 
 
-    //폴더 삭제
-    @DeleteMapping("/folder/delete/{folderId}")
-    public ResponseEntity deleteFolder(@PathVariable String folderId,@RequestParam String path){
+    //폴더 삭제(status 변경만)
+    @DeleteMapping("/{type}/delete/{Id}")
+    public ResponseEntity deleteFolder(@PathVariable String Id,@PathVariable String type ,@RequestParam String path){
 
-        log.info("Delete folder:"+folderId+" path : "+path);
-        boolean result = folderService.goToTrash(folderId,"folder");
+        log.info("Delete folder:"+Id+" path : "+path);
+        boolean result = folderService.goToTrash(Id,type);
 
         if(result){
             return ResponseEntity.ok().body("Folder deleted successfully");
         }else{
             return ResponseEntity.status(HttpStatus.EXPECTATION_FAILED).body("Folder delete failed");
         }
+    }
+
+
+    @DeleteMapping("/selected/delete")
+    public ResponseEntity deleteSelectedFolder(@RequestBody DeletedRequest deletedRequest){
+        log.info("Delete selected folder:"+deletedRequest);
+        try {
+            folderService.seletedDeleted(deletedRequest);
+            return ResponseEntity.ok("Selected folders and files deleted successfully");
+        } catch (IllegalArgumentException ex) {
+            log.error("Invalid request: {}", ex.getMessage());
+            return ResponseEntity.badRequest().body(ex.getMessage());
+        } catch (Exception ex) {
+            log.error("Error while deleting folders or files", ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to delete selected items");
+        }
+    }
+
+
+    @PutMapping("/{type}/{id}/favorite")
+    public ResponseEntity setFavorite(@PathVariable String type,@PathVariable String id ){
+        Map<String, Integer> respone= new HashMap<>();
+        int result=0;
+            result= folderService.favorite(id,type);
+
+
+
+        respone.put("result",result);
+
+        return ResponseEntity.ok().body(respone);
+
+    }
+
+    @GetMapping("/favorite")
+    public ResponseEntity isFavorite(HttpServletRequest request){
+        log.info("즐겨찾기 목록!!!");
+        String uid = (String)request.getAttribute("uid");
+        Map<String,Object> response = new HashMap<>();
+
+        List<FolderDto> subFolders = folderService.isFavorite(uid);
+        List<FileRequestDto> files = folderService.isFavoriteFile(uid);
+
+        response.put("files",files);
+        response.put("subFolders", subFolders);
+        response.put("uid",uid);
+        log.info("isFavorite subFolders:"+subFolders);
+        log.info(" isFavorite files:"+files);
+
+
+        return ResponseEntity.ok().body(response);
+    }
+
+
+    @GetMapping("/latest")
+    public ResponseEntity latest(HttpServletRequest request){
+        log.info("최근문서 목록!!!");
+        String uid = (String)request.getAttribute("uid");
+        Map<String,Object> response = new HashMap<>();
+
+        List<FolderDto> subFolders = folderService.latestFolder(uid);
+        List<FileRequestDto> files = folderService.latestFile(uid);
+
+        response.put("files",files);
+        response.put("subFolders", subFolders);
+        response.put("uid",uid);
+        log.info("latest subFolders:"+subFolders);
+        log.info(" latest files:"+files);
+
+
+        return ResponseEntity.ok().body(response);
+    }
+
+
+    @GetMapping("/trash")
+    public ResponseEntity trash(HttpServletRequest request){
+        log.info("휴지통 목록!!!");
+        String uid = (String)request.getAttribute("uid");
+        Map<String,Object> response = new HashMap<>();
+
+        List<FolderDto> subFolders = folderService.trashFolder(uid);
+        List<FileRequestDto> files = folderService.trashFile(uid);
+
+        response.put("files",files);
+        response.put("subFolders", subFolders);
+        response.put("uid",uid);
+        log.info("trash subFolders:"+subFolders);
+        log.info(" trash files:"+files);
+
+
+        return ResponseEntity.ok().body(response);
+    }
+
+    //폴더 복구,
+    @DeleteMapping("/{type}/restore/{id}")
+    public ResponseEntity restore(@PathVariable String type,@PathVariable String id){
+        log.info("복구 로직 시작"+type+"Id "+id);
+        boolean result = folderService.restore( type,id);
+
+        return ResponseEntity.ok().body(result);
+    }
+
+    @DeleteMapping("/{type}/permanent/{id}")
+    public ResponseEntity Permanent(@PathVariable String type,@PathVariable String id){
+        log.info("삭제 로직 시작"+type+"Id "+id);
+        boolean result = folderService.delete(type,id);
+        return ResponseEntity.ok().body(result);
     }
 
 

@@ -1,13 +1,9 @@
 package com.backend.dto.response.project;
 
-import com.backend.entity.project.ProjectComment;
-import com.backend.entity.project.ProjectSubTask;
-import com.backend.entity.project.TaskTag;
-import jakarta.persistence.*;
+import com.backend.entity.project.ProjectColumn;
+import com.backend.entity.project.ProjectTask;
 import lombok.*;
-
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.List;
 
 @Data
@@ -26,4 +22,20 @@ public class GetProjectTaskDTO {
     private int status; // 완료, 미완료
 
     private LocalDate duedate; // 마감일
+    private List<GetProjectSubTaskDTO> subtasks;
+    private List<GetProjectCommentDTO> comments;
+
+    public ProjectTask toProjectTask() {
+        return ProjectTask.builder()
+                .id(id)
+                .column(ProjectColumn.builder().id(columnId).build())
+                .title(title)
+                .content(content)
+                .priority(priority)
+                .duedate(duedate)
+                .status(status)
+                .comments(null)
+                .build();
+    }
+
 }

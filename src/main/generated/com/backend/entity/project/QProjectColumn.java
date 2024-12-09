@@ -26,6 +26,8 @@ public class QProjectColumn extends EntityPathBase<ProjectColumn> {
 
     public final NumberPath<Long> id = createNumber("id", Long.class);
 
+    public final NumberPath<Integer> position = createNumber("position", Integer.class);
+
     public final QProject project;
 
     public final ListPath<ProjectTask, QProjectTask> tasks = this.<ProjectTask, QProjectTask>createList("tasks", ProjectTask.class, QProjectTask.class, PathInits.DIRECT2);

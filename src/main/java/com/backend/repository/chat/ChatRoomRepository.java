@@ -9,5 +9,5 @@ import java.util.List;
 @Repository
 public interface ChatRoomRepository extends MongoRepository<ChatRoomDocument, String> {
 
-    List<ChatRoomDocument> findAllByLeaderOrMembers(String leaderUid, String memberUid);
+    List<ChatRoomDocument> findAllByLeaderOrMembersAndStatusIsNot(String leaderUid, String memberUid, int status);
 }

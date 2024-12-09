@@ -1,11 +1,11 @@
 package com.backend.service;
-
 import com.backend.dto.chat.UsersWithGroupNameDTO;
 import com.backend.dto.request.admin.user.PatchAdminUserApprovalDto;
 import com.backend.dto.request.user.EmailDTO;
 import com.backend.dto.request.user.PaymentInfoDTO;
 import com.backend.dto.request.user.PostUserRegisterDTO;
 import com.backend.dto.response.GetAdminUsersRespDto;
+import com.backend.dto.response.admin.user.GetGroupUsersDto;
 import com.backend.dto.response.user.GetUsersAllDto;
 import com.backend.dto.response.user.TermsDTO;
 import com.backend.entity.group.Group;
@@ -22,7 +22,6 @@ import com.backend.util.Role;
 import jakarta.mail.Message;
 import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
-import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,13 +33,11 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.Random;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
@@ -58,6 +55,7 @@ public class UserService {
     private final TermsRepository termsRepository;
     private final CardInfoRepository cardInfoRepository;
     private final JavaMailSenderImpl mailSender;
+    private final PasswordEncoder passwordEncoder;
     @Autowired
     private final RedisTemplate<String, String> redisTemplate;
 
@@ -110,21 +108,21 @@ public class UserService {
 
     public Page<GetUsersAllDto> getUsersAll(int page) {
         Pageable pageable = PageRequest.of(page, 5);
-        Page<User> users = userRepository.findAllByCompanyAndStatusIsNot("1246857",0,pageable);
+        Page<User> users = userRepository.findAllByCompanyAndStatusIsNotOrderByLevelDesc("1246857",0,pageable);
         Page<GetUsersAllDto> dtos = users.map(User::toGetUsersAllDto);
         return dtos;
     }
 
     public Page<GetUsersAllDto> getUsersAllByKeyword(int page,String keyword) {
         Pageable pageable = PageRequest.of(page, 5);
-        Page<User> users = userRepository.findAllByCompanyAndNameContainingAndStatusIsNot("1246857",keyword,0,pageable);
+        Page<User> users = userRepository.findAllByCompanyAndNameContainingAndStatusIsNotOrderByLevelDesc("1246857",keyword,0,pageable);
         Page<GetUsersAllDto> dtos = users.map(User::toGetUsersAllDto);
         return dtos;
     }
 
     public Page<GetUsersAllDto> getUsersAllByKeywordAndGroup(int page, String keyword, Long id) {
         Pageable pageable = PageRequest.of(page, 5);
-        Page<User> users = userRepository.findAllByCompanyAndNameContainingAndStatusIsNotAndGroupMappers_Group_Id("1246857",keyword,0,id,pageable);
+        Page<User> users = userRepository.findAllByCompanyAndNameContainingAndStatusIsNotAndGroupMappers_Group_IdOrderByLevelDesc("1246857",keyword,0,id,pageable);
         Optional<Group> group = groupRepository.findById(id);
         String groupName = group.get().getName();
         if(groupName.isEmpty()){
@@ -136,7 +134,7 @@ public class UserService {
 
     public Page<GetUsersAllDto> getUsersAllByGroup(int page, Long id) {
         Pageable pageable = PageRequest.of(page, 5);
-        Page<User> users = userRepository.findAllByCompanyAndStatusIsNotAndGroupMappers_Group_Id("1246857",0,id,pageable);
+        Page<User> users = userRepository.findAllByCompanyAndStatusIsNotAndGroupMappers_Group_IdOrderByLevelDesc("1246857",0,id,pageable);
         Optional<Group> group = groupRepository.findById(id);
         String groupName = group.get().getName();
         if(groupName.isEmpty()){
@@ -159,11 +157,16 @@ public class UserService {
         return termsDTOS;
     }
 
-    public void insertUser(PostUserRegisterDTO dto) {
-
+    public Long insertUser(PostUserRegisterDTO dto) {
+        String encodedPwd = passwordEncoder.encode(dto.getPwd());
+        if(dto.getGrade() == 3 ){
+            String companyCode = this.makeRandomCode(10);
+            dto.setCompany(companyCode);
+            log.info("여기 안 들어오니? "+companyCode);
+        }
         User entity = User.builder()
                             .uid(dto.getUid())
-                            .pwd(dto.getPwd())
+                            .pwd(encodedPwd)
                             .role(dto.getRole())
                             .grade(dto.getGrade())
                             .email(dto.getEmail())
@@ -172,15 +175,21 @@ public class UserService {
                             .addr1(dto.getAddr1())
                             .country(dto.getCountry())
                             .addr2(dto.getAddr2())
+                            .status(1)
+                            .level(0)
+                            .day(dto.getDay())
+                            .company(dto.getCompany())
+                            .companyName(dto.getCompanyName())
                             .paymentId(dto.getPaymentId())
                             .build();
 
         User user = userRepository.save(entity);
 
-        if("enterprise".equals(user.getGrade())){
-            String companyCode = this.makeRandomCode(10);
-            user.updateCompanyCode(companyCode);
+        if(user == null){
+            log.info("유저가 없나? "+user);
+            return null;
         }
+        return user.getId();
     }
 
     private String makeRandomCode(int length) {
@@ -202,7 +211,7 @@ public class UserService {
     }
 
 
-    public Long insertPayment(PaymentInfoDTO paymentInfoDTO) {
+    public CardInfo insertPayment(PaymentInfoDTO paymentInfoDTO) {
         CardInfo entity = CardInfo.builder()
                                 .activeStatus(paymentInfoDTO.getActiveStatus())
                                 .paymentCardNo(paymentInfoDTO.getPaymentCardNo())
@@ -211,7 +220,7 @@ public class UserService {
                                 .paymentCardCvc(paymentInfoDTO.getPaymentCardCvc())
                                 .build();
         CardInfo cardInfo = cardInfoRepository.save(entity);
-        return cardInfo.getCardId();
+        return cardInfo;
     }
 
 
@@ -295,7 +304,49 @@ public class UserService {
             log.info("유효성검사 데이터 잘 뽑히는지 확인 "+optUser);
             return false;
         }
-        log.info("유효성검사 데이터 잘 뽑히는지 확인 null 넣은 거"+optUser);
+        log.info("유효성검사 데이터 없는 거"+optUser);
         return true;
+    }
+
+    public ResponseEntity<?> getALlUsersCnt(String company) {
+        Long cnt = userRepository.countByCompany(company);
+        if(cnt >0){
+            return ResponseEntity.ok(cnt);
+        }
+        return ResponseEntity.ok(0L);
+    }
+
+    public Page<GetGroupUsersDto> getAdminUsersAllByKeyword(int page, String keyword) {
+        return null;
+    }
+
+    public Page<GetGroupUsersDto> getAdminUsersAllByKeywordAndGroup(int page, String keyword, Long id) {
+        return null;
+    }
+
+    public Page<GetGroupUsersDto> getAdminUsersAllByGroup(int page, Long id) {
+        return null;
+    }
+
+    public Page<GetGroupUsersDto> getAdminUsersAll(int page) {
+        Pageable pageable = PageRequest.of(page, 5);
+        Page<User> users = userRepository.findAllByCompanyAndStatusIsNotOrderByLevelDesc("1246857",0,pageable);
+        Page<GetGroupUsersDto> dtos = users.map(User::toGetGroupUsersDto);
+        return dtos;
+    }
+
+    // 12.06 사용자 아이디로 소속 부서 id 추출
+    public List<Group> getGroupsByUserUid(String uid) {
+        log.info("내 아이디는 받아오나"+uid);
+        return groupMapperRepository.findGroupsByUserUid(uid);
+    }
+
+    public Boolean validateCompany(String company) {
+        Page<User> user = userRepository.findAllByCompany(company, Pageable.unpaged());
+        if(user.isEmpty()){
+            return false;
+        }else {
+            return true;
+        }
     }
 }

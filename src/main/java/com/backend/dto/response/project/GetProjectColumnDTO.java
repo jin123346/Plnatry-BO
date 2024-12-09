@@ -2,10 +2,7 @@ package com.backend.dto.response.project;
 
 import com.backend.entity.project.Project;
 import com.backend.entity.project.ProjectColumn;
-import com.backend.entity.project.ProjectTask;
-import jakarta.persistence.*;
 import lombok.*;
-
 import java.util.List;
 
 @Data
@@ -17,9 +14,26 @@ public class GetProjectColumnDTO {
 
     private String title;
     private String color;
+    private int position;
 
     private List<GetProjectTaskDTO> tasks;
 
-
-
+    public ProjectColumn toEntityAddProject(Long projectId) {
+        return ProjectColumn.builder()
+                .id(id)
+                .title(title)
+                .color(color)
+                .position(position)
+                .project(Project.builder().id(projectId).build())
+                .build();
+    }
+    public ProjectColumn toEntity() {
+        return ProjectColumn.builder()
+                .id(id)
+                .title(title)
+                .color(color)
+                .position(position)
+                .tasks(tasks.stream().map(GetProjectTaskDTO::toProjectTask).toList())
+                .build();
+    }
 }

@@ -1,8 +1,7 @@
 package com.backend.dto.response.project;
 
-import com.backend.entity.project.Project;
+import com.backend.entity.project.ProjectCoworker;
 import com.backend.entity.user.User;
-import jakarta.persistence.*;
 import lombok.*;
 
 @Data
@@ -26,7 +25,17 @@ public class GetProjectCoworkerDTO {
     private boolean canDeleteTask; // 삭제 권한
     private boolean canEditProject; // 프로젝트 전체 권한
 
-
-
+    public ProjectCoworker toProjectCoworker() {
+        return ProjectCoworker.builder()
+                .id(id)
+                .user(User.builder().uid(uid).build())
+                .isOwner(isOwner)
+                .canRead(canRead)
+                .canAddTask(canAddTask)
+                .canUpdateTask(canUpdateTask)
+                .canDeleteTask(canDeleteTask)
+                .canEditProject(canEditProject)
+                .build();
+    }
 
 }

@@ -32,7 +32,7 @@ public class QUser extends EntityPathBase<User> {
 
     public final StringPath company = createString("company");
 
-    public final StringPath companyCode = createString("companyCode");
+    public final StringPath companyName = createString("companyName");
 
     public final StringPath country = createString("country");
 
@@ -59,6 +59,8 @@ public class QUser extends EntityPathBase<User> {
     public final NumberPath<Integer> level = createNumber("level", Integer.class);
 
     public final StringPath name = createString("name");
+
+    public final NumberPath<Long> outsourcingId = createNumber("outsourcingId", Long.class);
 
     public final NumberPath<Long> paymentId = createNumber("paymentId", Long.class);
 

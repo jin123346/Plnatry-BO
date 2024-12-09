@@ -1,10 +1,9 @@
 package com.backend.dto.request.project;
 
+import com.backend.dto.response.project.GetProjectColumnDTO;
 import com.backend.dto.response.user.GetUsersAllDto;
 import com.backend.entity.project.Project;
 import com.backend.entity.project.ProjectCoworker;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.OneToMany;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -17,10 +16,13 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 public class PostProjectDTO {
+
     private String title;
     private int type; // 부서내부, 회사내부, 협력, 공개
-    private List<GetUsersAllDto> coworkers;
+    private int status; // 0:삭제 1:대기중 2:진행중 3:완료
 
+    private List<GetProjectColumnDTO> columns;
+    private List<GetUsersAllDto> coworkers;
     private List<ProjectCoworker> coworkerEntities;
 
     public Project toProject() {
@@ -28,6 +30,7 @@ public class PostProjectDTO {
                 .title(title)
                 .type(type)
                 .status(1)
+                .columns(columns.stream().map(GetProjectColumnDTO::toEntity).toList())
                 .coworkers(coworkerEntities)
                 .build();
     }

@@ -35,6 +35,8 @@ public class QCardInfo extends EntityPathBase<CardInfo> {
 
     public final NumberPath<Integer> status = createNumber("status", Integer.class);
 
+    public final NumberPath<Long> userId = createNumber("userId", Long.class);
+
     public QCardInfo(String variable) {
         super(CardInfo.class, forVariable(variable));
     }

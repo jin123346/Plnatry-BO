@@ -26,11 +26,15 @@ public class QProject extends EntityPathBase<Project> {
 
     public final NumberPath<Long> id = createNumber("id", Long.class);
 
+    public final NumberPath<Integer> projectProgress = createNumber("projectProgress", Integer.class);
+
     public final NumberPath<Integer> status = createNumber("status", Integer.class);
 
     public final StringPath title = createString("title");
 
     public final NumberPath<Integer> type = createNumber("type", Integer.class);
+
+    public final NumberPath<Long> version = createNumber("version", Long.class);
 
     public QProject(String variable) {
         super(Project.class, forVariable(variable));

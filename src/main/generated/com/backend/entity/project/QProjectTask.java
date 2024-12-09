@@ -18,9 +18,11 @@ public class QProjectTask extends EntityPathBase<ProjectTask> {
 
     private static final long serialVersionUID = 20210021L;
 
+    private static final PathInits INITS = PathInits.DIRECT2;
+
     public static final QProjectTask projectTask = new QProjectTask("projectTask");
 
-    public final NumberPath<Long> columnId = createNumber("columnId", Long.class);
+    public final QProjectColumn column;
 
     public final ListPath<ProjectComment, QProjectComment> comments = this.<ProjectComment, QProjectComment>createList("comments", ProjectComment.class, QProjectComment.class, PathInits.DIRECT2);
 
@@ -30,26 +32,35 @@ public class QProjectTask extends EntityPathBase<ProjectTask> {
 
     public final NumberPath<Long> id = createNumber("id", Long.class);
 
+    public final NumberPath<Integer> position = createNumber("position", Integer.class);
+
     public final NumberPath<Integer> priority = createNumber("priority", Integer.class);
 
     public final NumberPath<Integer> status = createNumber("status", Integer.class);
 
     public final ListPath<ProjectSubTask, QProjectSubTask> subTasks = this.<ProjectSubTask, QProjectSubTask>createList("subTasks", ProjectSubTask.class, QProjectSubTask.class, PathInits.DIRECT2);
 
-    public final ListPath<TaskTag, QTaskTag> tags = this.<TaskTag, QTaskTag>createList("tags", TaskTag.class, QTaskTag.class, PathInits.DIRECT2);
-
     public final StringPath title = createString("title");
 
     public QProjectTask(String variable) {
-        super(ProjectTask.class, forVariable(variable));
+        this(ProjectTask.class, forVariable(variable), INITS);
     }
 
     public QProjectTask(Path<? extends ProjectTask> path) {
-        super(path.getType(), path.getMetadata());
+        this(path.getType(), path.getMetadata(), PathInits.getFor(path.getMetadata(), INITS));
     }
 
     public QProjectTask(PathMetadata metadata) {
-        super(ProjectTask.class, metadata);
+        this(metadata, PathInits.getFor(metadata, INITS));
+    }
+
+    public QProjectTask(PathMetadata metadata, PathInits inits) {
+        this(ProjectTask.class, metadata, inits);
+    }
+
+    public QProjectTask(Class<? extends ProjectTask> type, PathMetadata metadata, PathInits inits) {
+        super(type, metadata, inits);
+        this.column = inits.isInitialized("column") ? new QProjectColumn(forProperty("column"), inits.get("column")) : null;
     }
 
 }

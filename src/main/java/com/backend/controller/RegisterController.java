@@ -1,21 +1,24 @@
 package com.backend.controller;
 
-import com.backend.dto.request.user.EmailDTO;
-import com.backend.dto.request.user.PaymentInfoDTO;
-import com.backend.dto.request.user.PostUserRegisterDTO;
-import com.backend.dto.request.user.RegisterValidationDTO;
+import com.backend.dto.request.user.*;
 import com.backend.dto.response.user.TermsDTO;
+import com.backend.entity.user.CardInfo;
+import com.backend.entity.user.User;
 import com.backend.service.UserService;
+import com.backend.util.Role;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.Console;
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/auth")
-@CrossOrigin(origins = "http://localhost:8010")
 @RequiredArgsConstructor
 @Log4j2
 public class RegisterController {
@@ -61,7 +64,7 @@ public class RegisterController {
     public ResponseEntity<?> registerValidation(@RequestBody RegisterValidationDTO dto){
         String type = dto.getType();
         String value = dto.getValue();
-        log.info("유효성검사 컨트롤러 "+type+" "+value+dto);
+        log.info("유효성검사 컨트롤러 "+dto);
         try {
             Boolean result = userService.registerValidation(value, type);
             if (result) {
@@ -75,15 +78,51 @@ public class RegisterController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody PostUserRegisterDTO dto){
+    @Transactional
+    public ResponseEntity<?> register(@RequestBody RegisterDTO reqdto){
+        try {
 
-        PaymentInfoDTO paymentInfoDTO = dto.getPaymentInfo();
-        paymentInfoDTO.setActiveStatus(1);
-        Long paymentId = userService.insertPayment(paymentInfoDTO);
+            PaymentInfoDTO paymentInfoDTO = reqdto.getPayment();
+            PostUserRegisterDTO dto = reqdto.getUser();
+            String now = LocalDate.now().toString();
 
-        dto.setPaymentId(paymentId);
-        userService.insertUser(dto);
+            log.info("회원가입 컨트롤러 PaymentInfoDTO: {}", paymentInfoDTO);
+            log.info("회원가입 컨트롤러 PostUserRegisterDTO: {}", dto);
 
-        return null;
+            if (dto.getGrade() == 0) {
+                Boolean companyResult = userService.validateCompany(dto.getCompany());
+                if(companyResult){
+                    dto.setRole(Role.WORKER);
+                }else{
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("not found company");
+                }
+            }
+
+            CardInfo cardInfo = null;
+            if (dto.getGrade() == 3 || dto.getGrade() == 2) {
+                dto.setRole(dto.getGrade() == 3 ? Role.COMPANY : Role.USER);
+                dto.setDay(now);
+                paymentInfoDTO.setActiveStatus(1);
+                cardInfo = userService.insertPayment(paymentInfoDTO);
+            }
+
+            if (cardInfo != null) {
+                log.info("카드 엔티티: {}", cardInfo);
+                dto.setPaymentId(cardInfo.getCardId());
+            }
+
+            Long userId = userService.insertUser(dto);
+            if (userId == null) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Not Create");
+            }
+
+            if (cardInfo != null) {
+                cardInfo.updateUserid(userId);
+            }
+            return ResponseEntity.ok().body("success");
+        } catch (Exception e) {
+            log.error("회원가입 처리 중 오류", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("server error");
+        }
     }
 }

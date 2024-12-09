@@ -4,8 +4,10 @@ import com.backend.dto.chat.UsersWithGroupNameDTO;
 import com.backend.dto.request.admin.user.PatchAdminUserApprovalDto;
 import com.backend.dto.response.GetAdminUsersRespDto;
 import com.backend.dto.response.user.GetUsersAllDto;
+import com.backend.entity.group.Group;
 import com.backend.service.GroupService;
 import com.backend.service.UserService;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.data.domain.Page;
@@ -27,7 +29,6 @@ public class UserController {
     @GetMapping("/users")
     public ResponseEntity<?> getUser(){
         List<GetAdminUsersRespDto> users = userService.getUserNotTeamLeader();
-        System.out.println(users);
         return ResponseEntity.ok(users);
     }
 
@@ -38,7 +39,7 @@ public class UserController {
         return ResponseEntity.ok(users);
     }
 
-    // 12.01 전체유저 무한스크롤 요청
+    // 12.01 이상훈 전체유저 무한스크롤 요청
     @GetMapping("/users/all")
     public ResponseEntity<?> getAllUser2(
             @RequestParam int page,
@@ -70,7 +71,6 @@ public class UserController {
     public ResponseEntity<?> getAllUsersBySearch(
             @RequestParam String search
     ){
-        System.out.println(search);
         return ResponseEntity.ok().build();
     }
 
@@ -81,4 +81,12 @@ public class UserController {
         ResponseEntity<?> response = userService.patchUserApproval(dto);
         return response;
     }
+
+    @GetMapping("/users/all/cnt")
+    public ResponseEntity<?> getAllUserCnt(){
+        String company = "1246857";
+        ResponseEntity<?> response = userService.getALlUsersCnt(company);
+        return response;
+    }
+
 }
