@@ -8,6 +8,7 @@ import com.backend.util.jwt.JwtTokenProvider;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -17,6 +18,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Duration;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -39,6 +42,7 @@ public class AuthController {
 
     //2024/11/29 박연화 토큰 발급 수정
     @PostMapping("/login")
+    @Transactional
     public ResponseEntity<?> login(
             @RequestBody LoginDto dto
             , HttpServletResponse resp
@@ -66,6 +70,8 @@ public class AuthController {
             response.put("token",accessToken);
             response.put("role",user.get().getRole());
             response.put("user",user.get().toSliceDto());
+
+            user.get().updateLoginDate(LocalDateTime.now());
             return ResponseEntity.ok().body(response);
         }
 
