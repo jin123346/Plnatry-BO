@@ -1,6 +1,9 @@
 package com.backend.entity.project;
 
+import com.backend.dto.response.admin.project.GetProjectLeaderDto;
+import com.backend.dto.response.admin.project.GetProjects;
 import com.backend.dto.response.project.GetProjectDTO;
+import com.backend.dto.response.project.GetProjectListDTO;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -75,6 +78,14 @@ public class Project { //프로젝트
             case 4 -> "팀";
             default -> "공개";
         };
+    }
+
+    public GetProjects toGetProjects() {
+        return GetProjects.builder()
+                .projectTitle(title)
+                .projectStatus(selectStatus())
+                .projectId(id)
+                .build();
     }
 
 }
