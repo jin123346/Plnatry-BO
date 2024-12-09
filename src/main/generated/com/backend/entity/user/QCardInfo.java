@@ -33,8 +33,6 @@ public class QCardInfo extends EntityPathBase<CardInfo> {
 
     public final StringPath paymentCardNo = createString("paymentCardNo");
 
-    public final StringPath paymentToken = createString("paymentToken");
-
     public final NumberPath<Integer> status = createNumber("status", Integer.class);
 
     public QCardInfo(String variable) {

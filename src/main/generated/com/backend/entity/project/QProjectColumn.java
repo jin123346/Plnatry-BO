@@ -18,26 +18,39 @@ public class QProjectColumn extends EntityPathBase<ProjectColumn> {
 
     private static final long serialVersionUID = 1767999286L;
 
+    private static final PathInits INITS = PathInits.DIRECT2;
+
     public static final QProjectColumn projectColumn = new QProjectColumn("projectColumn");
 
     public final StringPath color = createString("color");
 
     public final NumberPath<Long> id = createNumber("id", Long.class);
 
+    public final QProject project;
+
     public final ListPath<ProjectTask, QProjectTask> tasks = this.<ProjectTask, QProjectTask>createList("tasks", ProjectTask.class, QProjectTask.class, PathInits.DIRECT2);
 
     public final StringPath title = createString("title");
 
     public QProjectColumn(String variable) {
-        super(ProjectColumn.class, forVariable(variable));
+        this(ProjectColumn.class, forVariable(variable), INITS);
     }
 
     public QProjectColumn(Path<? extends ProjectColumn> path) {
-        super(path.getType(), path.getMetadata());
+        this(path.getType(), path.getMetadata(), PathInits.getFor(path.getMetadata(), INITS));
     }
 
     public QProjectColumn(PathMetadata metadata) {
-        super(ProjectColumn.class, metadata);
+        this(metadata, PathInits.getFor(metadata, INITS));
+    }
+
+    public QProjectColumn(PathMetadata metadata, PathInits inits) {
+        this(ProjectColumn.class, metadata, inits);
+    }
+
+    public QProjectColumn(Class<? extends ProjectColumn> type, PathMetadata metadata, PathInits inits) {
+        super(type, metadata, inits);
+        this.project = inits.isInitialized("project") ? new QProject(forProperty("project")) : null;
     }
 
 }

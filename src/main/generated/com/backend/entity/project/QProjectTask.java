@@ -26,11 +26,9 @@ public class QProjectTask extends EntityPathBase<ProjectTask> {
 
     public final StringPath content = createString("content");
 
-    public final DatePath<java.time.LocalDate> dueDate = createDate("dueDate", java.time.LocalDate.class);
+    public final DatePath<java.time.LocalDate> duedate = createDate("duedate", java.time.LocalDate.class);
 
     public final NumberPath<Long> id = createNumber("id", Long.class);
-
-    public final NumberPath<Integer> position = createNumber("position", Integer.class);
 
     public final NumberPath<Integer> priority = createNumber("priority", Integer.class);
 
@@ -38,7 +36,7 @@ public class QProjectTask extends EntityPathBase<ProjectTask> {
 
     public final ListPath<ProjectSubTask, QProjectSubTask> subTasks = this.<ProjectSubTask, QProjectSubTask>createList("subTasks", ProjectSubTask.class, QProjectSubTask.class, PathInits.DIRECT2);
 
-    public final ListPath<TaskTag, QTaskTag> taskTags = this.<TaskTag, QTaskTag>createList("taskTags", TaskTag.class, QTaskTag.class, PathInits.DIRECT2);
+    public final ListPath<TaskTag, QTaskTag> tags = this.<TaskTag, QTaskTag>createList("tags", TaskTag.class, QTaskTag.class, PathInits.DIRECT2);
 
     public final StringPath title = createString("title");
 

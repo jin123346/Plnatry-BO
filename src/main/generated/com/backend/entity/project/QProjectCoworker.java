@@ -11,16 +11,16 @@ import com.querydsl.core.types.dsl.PathInits;
 
 
 /**
- * QProjectMember is a Querydsl query type for ProjectMember
+ * QProjectCoworker is a Querydsl query type for ProjectCoworker
  */
 @Generated("com.querydsl.codegen.DefaultEntitySerializer")
-public class QProjectMember extends EntityPathBase<ProjectMember> {
+public class QProjectCoworker extends EntityPathBase<ProjectCoworker> {
 
-    private static final long serialVersionUID = 2045066874L;
+    private static final long serialVersionUID = -1450206518L;
 
     private static final PathInits INITS = PathInits.DIRECT2;
 
-    public static final QProjectMember projectMember = new QProjectMember("projectMember");
+    public static final QProjectCoworker projectCoworker = new QProjectCoworker("projectCoworker");
 
     public final BooleanPath canAddTask = createBoolean("canAddTask");
 
@@ -36,28 +36,29 @@ public class QProjectMember extends EntityPathBase<ProjectMember> {
 
     public final BooleanPath isOwner = createBoolean("isOwner");
 
-    public final NumberPath<Long> projectId = createNumber("projectId", Long.class);
+    public final QProject project;
 
     public final com.backend.entity.user.QUser user;
 
-    public QProjectMember(String variable) {
-        this(ProjectMember.class, forVariable(variable), INITS);
+    public QProjectCoworker(String variable) {
+        this(ProjectCoworker.class, forVariable(variable), INITS);
     }
 
-    public QProjectMember(Path<? extends ProjectMember> path) {
+    public QProjectCoworker(Path<? extends ProjectCoworker> path) {
         this(path.getType(), path.getMetadata(), PathInits.getFor(path.getMetadata(), INITS));
     }
 
-    public QProjectMember(PathMetadata metadata) {
+    public QProjectCoworker(PathMetadata metadata) {
         this(metadata, PathInits.getFor(metadata, INITS));
     }
 
-    public QProjectMember(PathMetadata metadata, PathInits inits) {
-        this(ProjectMember.class, metadata, inits);
+    public QProjectCoworker(PathMetadata metadata, PathInits inits) {
+        this(ProjectCoworker.class, metadata, inits);
     }
 
-    public QProjectMember(Class<? extends ProjectMember> type, PathMetadata metadata, PathInits inits) {
+    public QProjectCoworker(Class<? extends ProjectCoworker> type, PathMetadata metadata, PathInits inits) {
         super(type, metadata, inits);
+        this.project = inits.isInitialized("project") ? new QProject(forProperty("project")) : null;
         this.user = inits.isInitialized("user") ? new com.backend.entity.user.QUser(forProperty("user"), inits.get("user")) : null;
     }
 

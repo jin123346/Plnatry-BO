@@ -22,9 +22,9 @@ public class QProject extends EntityPathBase<Project> {
 
     public final ListPath<ProjectColumn, QProjectColumn> columns = this.<ProjectColumn, QProjectColumn>createList("columns", ProjectColumn.class, QProjectColumn.class, PathInits.DIRECT2);
 
-    public final NumberPath<Long> id = createNumber("id", Long.class);
+    public final ListPath<ProjectCoworker, QProjectCoworker> coworkers = this.<ProjectCoworker, QProjectCoworker>createList("coworkers", ProjectCoworker.class, QProjectCoworker.class, PathInits.DIRECT2);
 
-    public final ListPath<ProjectMember, QProjectMember> members = this.<ProjectMember, QProjectMember>createList("members", ProjectMember.class, QProjectMember.class, PathInits.DIRECT2);
+    public final NumberPath<Long> id = createNumber("id", Long.class);
 
     public final NumberPath<Integer> status = createNumber("status", Integer.class);
 

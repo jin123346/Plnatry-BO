@@ -7,6 +7,7 @@ import com.backend.dto.response.GetAdminUsersRespDto;
 import com.backend.dto.response.UserDto;
 import com.backend.dto.response.user.GetUsersAllDto;
 import com.backend.entity.calendar.CalendarMapper;
+import com.backend.entity.community.FavoriteBoard;
 import com.backend.entity.group.GroupMapper;
 import com.backend.util.Role;
 import jakarta.persistence.*;
@@ -16,6 +17,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -103,6 +105,10 @@ public class User {
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "user")
     @ToString.Exclude
     private List<CalendarMapper> calendars;
+
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude
+    private List<FavoriteBoard> favoriteBoards = new ArrayList<>(); // 즐겨찾기 목록
 
     public String selectLevelString(){
         return switch (level) {

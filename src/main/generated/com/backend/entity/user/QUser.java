@@ -22,15 +22,17 @@ public class QUser extends EntityPathBase<User> {
 
     public static final QUser user = new QUser("user");
 
-    public final StringPath address = createString("address");
+    public final StringPath addr1 = createString("addr1");
+
+    public final StringPath addr2 = createString("addr2");
 
     public final ListPath<Attendance, QAttendance> attendance = this.<Attendance, QAttendance>createList("attendance", Attendance.class, QAttendance.class, PathInits.DIRECT2);
 
     public final ListPath<com.backend.entity.calendar.CalendarMapper, com.backend.entity.calendar.QCalendarMapper> calendars = this.<com.backend.entity.calendar.CalendarMapper, com.backend.entity.calendar.QCalendarMapper>createList("calendars", com.backend.entity.calendar.CalendarMapper.class, com.backend.entity.calendar.QCalendarMapper.class, PathInits.DIRECT2);
 
-    public final StringPath city = createString("city");
-
     public final StringPath company = createString("company");
+
+    public final StringPath companyCode = createString("companyCode");
 
     public final StringPath country = createString("country");
 
@@ -39,6 +41,8 @@ public class QUser extends EntityPathBase<User> {
     public final StringPath day = createString("day");
 
     public final StringPath email = createString("email");
+
+    public final ListPath<com.backend.entity.community.FavoriteBoard, com.backend.entity.community.QFavoriteBoard> favoriteBoards = this.<com.backend.entity.community.FavoriteBoard, com.backend.entity.community.QFavoriteBoard>createList("favoriteBoards", com.backend.entity.community.FavoriteBoard.class, com.backend.entity.community.QFavoriteBoard.class, PathInits.DIRECT2);
 
     public final NumberPath<Integer> grade = createNumber("grade", Integer.class);
 
@@ -56,13 +60,11 @@ public class QUser extends EntityPathBase<User> {
 
     public final StringPath name = createString("name");
 
-    public final StringPath paymentToken = createString("paymentToken");
+    public final NumberPath<Long> paymentId = createNumber("paymentId", Long.class);
 
     public final QProfileImg profileImg;
 
     public final StringPath pwd = createString("pwd");
-
-    public final StringPath refreshToken = createString("refreshToken");
 
     public final EnumPath<com.backend.util.Role> role = createEnum("role", com.backend.util.Role.class);
 
