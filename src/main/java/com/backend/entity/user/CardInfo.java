@@ -37,4 +37,8 @@ public class CardInfo {
 
     @Column(name = "auto_payment")
     private int autoPayment; // 자동결제여부
+
+    public void updateUserid(Long id) {
+        this.userId = id;
+    }
 }

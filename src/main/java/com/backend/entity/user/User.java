@@ -273,4 +273,8 @@ public class User {
     public void patchRole(Role role) {
         this.role = role;
     }
+
+    public void updateLoginDate(LocalDateTime now) {
+        this.lastLogin = now;
+    }
 }
