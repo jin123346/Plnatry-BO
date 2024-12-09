@@ -11,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -21,12 +22,12 @@ public class PageService {
     private final PageRepository pageRepository;
     private final PermissionService permissionService;
 
-    public String save(PageDto page) {
+    public Page save(PageDto page) {
 
         Page pages  = page.ToEntity();
         Page savedpage =  pageRepository.save(pages);
         log.info(savedpage);
-        return savedpage.getId();
+        return savedpage;
     }
 
     public PageDto findById(String id) {
@@ -37,12 +38,17 @@ public class PageService {
                     .id(page.getId())
                     .ownerUid(page.getOwnerUid())
                     .title(page.getTitle())
-                    .content((String) page.getContent())
+                    .content(page.getContent())
                     .createAt(page.getCreateAt())
                     .updateAt(page.getUpdateAt())
                     .build();
             return pageDto;
         }
         return null;
+    }
+
+    public List<Page> pageList(String uid){
+        List<Page> list = pageRepository.findByOwnerUid(uid);
+        return list;
     }
 }
