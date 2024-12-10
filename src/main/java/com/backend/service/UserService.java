@@ -1,5 +1,4 @@
 package com.backend.service;
-import com.backend.document.user.AttendanceTime;
 import com.backend.dto.chat.UsersWithGroupNameDTO;
 import com.backend.dto.request.admin.user.PatchAdminUserApprovalDto;
 import com.backend.dto.request.user.EmailDTO;
@@ -363,20 +362,6 @@ public class UserService {
         }
     }
 
-    public ResponseEntity<?> goToWork(String uid, LocalDateTime start) {
-        LocalDate date = LocalDate.now();
-        LocalTime checkInTime = LocalTime.now();
-        Optional<AttendanceTime> optAttendance = attendanceTimeRepository.findByUserIdAndDate(uid, date);
-        if (optAttendance.isPresent()) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body("이미 출근 기록이 있습니다.");
-        }
-        AttendanceTime.builder()
-                .userId(uid)
-                .checkInTime(checkInTime)
-                .build();
-        return null;
-    }
-
 
     public ResponseEntity<?> postAlert(PostUserAlarmDto dto, Long id) {
         Optional<User> user = userRepository.findById(id);
@@ -399,4 +384,5 @@ public class UserService {
 
         return ResponseEntity.ok("성공");
     }
+
 }
