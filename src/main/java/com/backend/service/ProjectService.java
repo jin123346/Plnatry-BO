@@ -12,6 +12,7 @@ import com.backend.dto.response.user.GetUsersAllDto;
 import com.backend.entity.calendar.CalendarMapper;
 import com.backend.entity.group.Group;
 import com.backend.entity.group.GroupLeader;
+import com.backend.entity.group.GroupMapper;
 import com.backend.entity.project.Project;
 import com.backend.entity.project.ProjectColumn;
 import com.backend.entity.project.ProjectCoworker;
@@ -57,29 +58,58 @@ public class ProjectService {
     private final ProjectRepository projectRepository;
     private final ProjectCoworkerRepository coworkerRepository;
     private final GroupRepository groupRepository;
-    private final GroupLeaderRepository groupLeaderRepository;
-    private final CalendarMapperRepository calendarMapperRepository;
     private final ProjectColumnRepository columnRepository;
     private final ProjectTaskRepository taskRepository;
 
     public Project createProject(PostProjectDTO postDTO, String username) {
 
-        Set<GetUsersAllDto> userList = postDTO.getCoworkers();
+        List<GetUsersAllDto> userList = postDTO.getCoworkers();
         Project project = postDTO.toProject();
-
+        // 공동 작업자 추가
         userList.forEach(u -> project.addCoworker(ProjectCoworker.builder()
                 .user(User.builder().id(u.getId()).build())
                 .project(project)
                 .isOwner(false)
                 .build()));
-
+        // 소유자 추가
         project.addCoworker(ProjectCoworker.builder()
-                        .user(userRepository.findByUid(username).orElseThrow(() -> new IllegalArgumentException(username+"작업자를 찾을 수 없습니다.")))
-                        .isOwner(true)
-                        .build());
+                .user(userRepository.findByUid(username).orElseThrow(() -> new IllegalArgumentException(username + " 작업자를 찾을 수 없습니다.")))
+                .isOwner(true)
+                .build());
+        // 컬럼 및 태스크 추가
+        postDTO.getColumns().forEach(columnDTO -> {
+            ProjectColumn column = columnDTO.toEntity();
 
-        return projectRepository.save(project);
+            log.info(column);
+            // 태스크 추가
+            columnDTO.getTasks().forEach(taskDTO -> {
+                ProjectTask task = taskDTO.toProjectTask();
+
+                log.info(task);
+                // 서브태스크 추가
+                log.info("is Subtasks() null?" + taskDTO.getSubtasks() != null);
+                if (taskDTO.getSubtasks() != null) {
+                    taskDTO.getSubtasks().forEach(subTaskDTO -> {
+                        task.addSubTask(subTaskDTO.toEntity()); // 서브태스크 추가
+                        log.info(subTaskDTO);
+                    });
+                }
+                // 댓글 추가
+                log.info("is Comments null?" + taskDTO.getComments() != null);
+                if (taskDTO.getComments() != null) {
+                    taskDTO.getComments().forEach(commentDTO -> {
+                        task.addComment(commentDTO.toEntity()); // 댓글 추가
+                        log.info(commentDTO);
+                    });
+                }
+                if(task!=null) column.addTask(task); // 컬럼에 태스크 추가
+            });
+            if(column!=null)project.addColumn(column); // 프로젝트에 컬럼 추가
+        });
+        return projectRepository.save(project);  // 최종적으로 프로젝트를 저장
     }
+
+
 
     public Map<String,Object> getAllProjects(String username) {
         Map<String,Object> map = new HashMap<>();
@@ -146,67 +176,25 @@ public class ProjectService {
         return ResponseEntity.ok(projectLeaderDto);
     }
 
-    public ResponseEntity<?> getLeaderDetail(Long id) {
-        GetProjectLeaderDetailDto getProjectLeaderDetailDto = new GetProjectLeaderDetailDto();
-        Optional<User> leader = userRepository.findById(id);
-        if(leader.isEmpty()){
-            return ResponseEntity.badRequest().body("로그인 정보가 일치하지 않습니다...");
-        }
-        getProjectLeaderDetailDto.setHp(leader.get().getHp());
-        getProjectLeaderDetailDto.setId(leader.get().getId());
-        getProjectLeaderDetailDto.setAddress(leader.get().getAddr1()+" "+leader.get().getAddr2());
-        getProjectLeaderDetailDto.setName(leader.get().getName());
-        Optional<GroupLeader> groupLeader = groupLeaderRepository.findByUser(leader.get());
-        Group group = groupLeader.get().getGroup();
-        System.out.println("===========ddd=======");
-        System.out.println(groupLeader.get());
-        System.out.println(group);
-        Optional<CalendarMapper> groupCalendar;
-        if(group.getType()==0){
-            groupCalendar = calendarMapperRepository.findByUserAndCalendar_Status(leader.get(),3);
-        } else {
-            groupCalendar = calendarMapperRepository.findByUserAndCalendar_Status(leader.get(),4);
-        }
-        if(groupCalendar.isPresent()){
-            getProjectLeaderDetailDto.setCalendarId(groupCalendar.get().getCalendar().getCalendarId());
-            getProjectLeaderDetailDto.setCalendarName(groupCalendar.get().getCalendar().getName());
-        } else {
-            getProjectLeaderDetailDto.setCalendarId(0L);
-            getProjectLeaderDetailDto.setCalendarName("없음");
-        }
-
-        List<Project> project = projectRepository.findAllByCoworkers_UserAndStatusIsNot(leader.get(),0);
-        if(project.isEmpty()){
-            List<GetProjects> projects = new ArrayList<>();
-            GetProjects proj = GetProjects.builder()
-                    .projectId(0L)
-                    .projectStatus("없음")
-                    .projectTitle("없음")
-                    .build();
-            projects.add(proj);
-            getProjectLeaderDetailDto.setProjects(projects);
-        } else {
-            List<GetProjects> projects = new ArrayList<>();
-            for (Project project1 : project) {
-                GetProjects proj = GetProjects.builder()
-                        .projectId(project1.getId())
-                        .projectStatus(project1.selectStatus())
-                        .projectTitle(project1.getTitle())
-                        .build();
-                projects.add(proj);
-            }
-            getProjectLeaderDetailDto.setProjects(projects);
-        }
-
-        return ResponseEntity.ok(getProjectLeaderDetailDto);
-    }
-
     public ProjectColumn addColumn(GetProjectColumnDTO columnDTO, Long projectId) {
         return columnRepository.save(columnDTO.toEntityAddProject(projectId));
     }
 
     public ProjectTask saveTask(GetProjectTaskDTO taskDTO) {
         return taskRepository.save(taskDTO.toProjectTask());
+    }
+    public boolean delete(String type, Long id) {
+        try {
+            switch (type) {
+                case "task" -> taskRepository.deleteById(id);
+                case "column" -> columnRepository.deleteById(id);
+                case "project" -> projectRepository.deleteById(id);
+            }
+            return true;
+        }catch (Exception e){
+            log.error(e.getMessage());
+            return false;
+        }
     }
 
     public void updateCoworkers(PatchCoworkersDTO dto) {
@@ -234,5 +222,36 @@ public class ProjectService {
             });
         }
 
+    }
+
+    public ResponseEntity<?> getProjects(String company, String group) {
+        Optional<Group> optGroup = groupRepository.findByNameAndStatusIsNotAndCompany(group,0,company);
+        if(optGroup.isEmpty()) {
+            return ResponseEntity.badRequest().body("정보가 일치하지 않습니다...");
+        }
+
+        List<GroupMapper> groupMappers = optGroup.get().getGroupMappers();
+        List<User> users = groupMappers.stream().map(GroupMapper::getUser).toList();
+        List<Project> projects = new ArrayList<>();
+        for (User user : users) {
+            List<Project> project = projectRepository.findAllByCoworkers_UserAndStatusIsNot(user,0);
+            projects.addAll(project);
+        }
+        Set<Project> uniqueProjects = new HashSet<>(projects);
+        projects = new ArrayList<>(uniqueProjects);
+
+        List<GetProjects> dtos = projects.stream().map(Project::toGetProjects).toList();
+        return ResponseEntity.ok(dtos);
+    }
+
+    public ResponseEntity<?> getAdminProjectColumns(Long id) {
+        Optional<Project> project = projectRepository.findById(id);
+        if(project.isEmpty()){
+            return ResponseEntity.badRequest().body("프로젝트가 없습니다...");
+        }
+        List<ProjectColumn> columns = project.get().getColumns();
+
+        System.out.println("============================222");
+        return ResponseEntity.ok(columns);
     }
 }

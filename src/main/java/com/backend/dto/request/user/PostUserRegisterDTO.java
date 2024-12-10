@@ -23,7 +23,7 @@ public class PostUserRegisterDTO {
     private Integer grade; // 결제등급 basic company standard enterprise
     private Role role;
     private String day;
-    private Long paymentId; //이게뭐지
+    private Long paymentId; //카드인포 아이디
     private String company; //회사코드
     private String companyName; //회사이름
 }
