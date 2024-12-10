@@ -1,4 +1,5 @@
 package com.backend.service;
+import com.backend.document.user.AttendanceTime;
 import com.backend.dto.chat.UsersWithGroupNameDTO;
 import com.backend.dto.request.admin.user.PatchAdminUserApprovalDto;
 import com.backend.dto.request.user.EmailDTO;
@@ -16,6 +17,7 @@ import com.backend.entity.user.User;
 import com.backend.repository.GroupMapperRepository;
 import com.backend.repository.GroupRepository;
 import com.backend.repository.UserRepository;
+import com.backend.repository.user.AttendanceTimeRepository;
 import com.backend.repository.user.CardInfoRepository;
 import com.backend.repository.user.TermsRepository;
 import com.backend.util.Role;
@@ -31,12 +33,16 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
@@ -56,6 +62,7 @@ public class UserService {
     private final CardInfoRepository cardInfoRepository;
     private final JavaMailSenderImpl mailSender;
     private final PasswordEncoder passwordEncoder;
+    private final AttendanceTimeRepository attendanceTimeRepository;
     @Autowired
     private final RedisTemplate<String, String> redisTemplate;
 
@@ -157,9 +164,13 @@ public class UserService {
         return termsDTOS;
     }
 
-    public void insertUser(PostUserRegisterDTO dto) {
+    public Long insertUser(PostUserRegisterDTO dto) {
         String encodedPwd = passwordEncoder.encode(dto.getPwd());
-
+        if(dto.getGrade() == 3 ){
+            String companyCode = this.makeRandomCode(10);
+            dto.setCompany(companyCode);
+            log.info("여기 안 들어오니? "+companyCode);
+        }
         User entity = User.builder()
                             .uid(dto.getUid())
                             .pwd(encodedPwd)
@@ -171,18 +182,21 @@ public class UserService {
                             .addr1(dto.getAddr1())
                             .country(dto.getCountry())
                             .addr2(dto.getAddr2())
-                .status(1)
-                .day(dto.getDay())
-                .company(dto.getCompany())
-                .companyName(dto.getCompanyName())
+                            .status(1)
+                            .level(0)
+                            .day(dto.getDay())
+                            .company(dto.getCompany())
+                            .companyName(dto.getCompanyName())
+                            .paymentId(dto.getPaymentId())
                             .build();
 
         User user = userRepository.save(entity);
 
-        if(user.getGrade() == 3 ){
-            String companyCode = this.makeRandomCode(10);
-            user.updateCompanyCode(companyCode);
+        if(user == null){
+            log.info("유저가 없나? "+user);
+            return null;
         }
+        return user.getId();
     }
 
     private String makeRandomCode(int length) {
@@ -204,7 +218,7 @@ public class UserService {
     }
 
 
-    public Long insertPayment(PaymentInfoDTO paymentInfoDTO) {
+    public CardInfo insertPayment(PaymentInfoDTO paymentInfoDTO) {
         CardInfo entity = CardInfo.builder()
                                 .activeStatus(paymentInfoDTO.getActiveStatus())
                                 .paymentCardNo(paymentInfoDTO.getPaymentCardNo())
@@ -213,7 +227,7 @@ public class UserService {
                                 .paymentCardCvc(paymentInfoDTO.getPaymentCardCvc())
                                 .build();
         CardInfo cardInfo = cardInfoRepository.save(entity);
-        return cardInfo.getCardId();
+        return cardInfo;
     }
 
 
@@ -332,5 +346,28 @@ public class UserService {
     public List<Group> getGroupsByUserUid(String uid) {
         log.info("내 아이디는 받아오나"+uid);
         return groupMapperRepository.findGroupsByUserUid(uid);
+    }
+
+    public Boolean validateCompany(String company) {
+        Page<User> user = userRepository.findAllByCompany(company, Pageable.unpaged());
+        if(user.isEmpty()){
+            return false;
+        }else {
+            return true;
+        }
+    }
+
+    public ResponseEntity<?> goToWork(String uid, LocalDateTime start) {
+        LocalDate date = LocalDate.now();
+        LocalTime checkInTime = LocalTime.now();
+        Optional<AttendanceTime> optAttendance = attendanceTimeRepository.findByUserIdAndDate(uid, date);
+        if (optAttendance.isPresent()) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body("이미 출근 기록이 있습니다.");
+        }
+        AttendanceTime.builder()
+                .userId(uid)
+                .checkInTime(checkInTime)
+                .build();
+        return null;
     }
 }

@@ -1,6 +1,5 @@
 package com.backend.entity.project;
 
-import com.backend.dto.response.admin.project.GetProjectLeaderDto;
 import com.backend.dto.response.admin.project.GetProjects;
 import com.backend.dto.response.project.GetProjectDTO;
 import com.backend.dto.response.project.GetProjectListDTO;
@@ -8,7 +7,6 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 @AllArgsConstructor
 @NoArgsConstructor
@@ -29,20 +27,18 @@ public class Project { //프로젝트
     @Setter
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
     @ToString.Exclude
-    private Set<ProjectCoworker> coworkers = new HashSet<>();
+    private List<ProjectCoworker> coworkers = new ArrayList<>();
 
+    @Setter
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
     @ToString.Exclude
-    private Set<ProjectColumn> columns = new TreeSet<>(Comparator.comparing(ProjectColumn::getPosition));
-
-    @Version // Optimistic locking을 위한 버전 필드
-    private Long version;
+    private List<ProjectColumn> columns = new ArrayList<>();
 
     @Column(name = "project_progress")
     private Integer projectProgress;
 
     public void addCoworker(ProjectCoworker coworker) {
-        if(coworkers == null) {coworkers = new HashSet<>();}
+        if(coworkers == null) {coworkers = new ArrayList<>();}
         coworkers.add(coworker);
         coworker.setProject(this);
     }
@@ -51,14 +47,20 @@ public class Project { //프로젝트
         coworker.setProject(null);
     }
 
+    public void addColumn(ProjectColumn column) {
+        if(columns == null) {columns = new ArrayList<>();}
+        columns.add(column);
+        column.setProject(this);
+    }
+
     public GetProjectDTO toGetProjectDTO() {
         return GetProjectDTO.builder()
                 .id(id)
                 .title(title)
                 .type(type)
                 .status(status)
-                .columns(columns.stream().map(ProjectColumn::toGetProjectColumnDTO).collect(Collectors.toSet()))
-                .coworkers(coworkers.stream().map(ProjectCoworker::toGetCoworkerDTO).collect(Collectors.toSet()))
+                .columns(columns.stream().map(ProjectColumn::toGetProjectColumnDTO).toList())
+                .coworkers(coworkers.stream().map(ProjectCoworker::toGetCoworkerDTO).toList())
                 .build();
     }
 
