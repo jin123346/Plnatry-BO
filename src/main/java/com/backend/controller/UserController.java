@@ -5,7 +5,7 @@ import com.backend.dto.request.admin.user.PatchAdminUserApprovalDto;
 import com.backend.dto.response.GetAdminUsersRespDto;
 import com.backend.dto.response.user.GetUsersAllDto;
 import com.backend.entity.group.Group;
-import com.backend.service.AttendanceService;
+import com.backend.repository.UserRepository;
 import com.backend.service.GroupService;
 import com.backend.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -29,6 +29,7 @@ public class UserController {
 
     private final UserService userService;
     private final GroupService groupService;
+    private final UserRepository userRepository;
 
     @GetMapping("/users")
     public ResponseEntity<?> getUser(){
@@ -91,6 +92,22 @@ public class UserController {
         String company = "1246857";
         ResponseEntity<?> response = userService.getALlUsersCnt(company);
         return response;
+    }
+
+
+    @GetMapping("/user/id")
+    public ResponseEntity<?> getCalendarGroups (
+            HttpServletRequest req
+    ){
+        Object idObj = req.getAttribute("id");
+        Long id;
+        if (idObj != null) {
+            id = Long.valueOf(idObj.toString());  // 문자열을 Long으로 변환
+        } else {
+            id= 0L;
+        }
+
+        return ResponseEntity.ok(id);
     }
 
 
