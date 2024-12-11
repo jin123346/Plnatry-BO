@@ -23,7 +23,6 @@ import java.util.*;
 
 @RestController
 @RequestMapping("/api")
-@CrossOrigin(origins = "http://localhost:8010")
 @RequiredArgsConstructor
 @Log4j2
 public class UserController {
@@ -95,21 +94,20 @@ public class UserController {
         return response;
     }
 
-//    @GetMapping("/attendance")
-//    public ResponseEntity<?> workCheck (){
-//        List<LocalDateTime> today = userService.getTodayWork();
-//        return null;
-//    }
-    @PostMapping("/attendance/checkIn")
-    public ResponseEntity<?> checkIn(Authentication auth , LocalDateTime start){
-        String uid = auth.getName();
-        userService.goToWork(uid, start);
-        return null;
-    }
 
-    @PostMapping("/attendance/checkOut")
-    public ResponseEntity<?> checkOut(LocalDateTime end){
-        return null;
+    @GetMapping("/user/id")
+    public ResponseEntity<?> getCalendarGroups (
+            HttpServletRequest req
+    ){
+        Object idObj = req.getAttribute("id");
+        Long id;
+        if (idObj != null) {
+            id = Long.valueOf(idObj.toString());  // 문자열을 Long으로 변환
+        } else {
+            id= 0L;
+        }
+
+        return ResponseEntity.ok(id);
     }
 
     @GetMapping("/user/id")
