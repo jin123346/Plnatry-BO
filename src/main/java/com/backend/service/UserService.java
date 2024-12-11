@@ -66,10 +66,8 @@ public class UserService {
     private final JavaMailSenderImpl mailSender;
     private final PasswordEncoder passwordEncoder;
     private final AttendanceTimeRepository attendanceTimeRepository;
-    @Autowired
     private final RedisTemplate<String, String> redisTemplate;
-    @Autowired
-    private AlertRepository alertRepository;
+    private final AlertRepository alertRepository;
 
     public List<GetAdminUsersRespDto> getUserNotTeamLeader() {
         List<User> users = userRepository.findAllByRole(Role.WORKER);

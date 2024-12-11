@@ -110,5 +110,20 @@ public class UserController {
         return ResponseEntity.ok(id);
     }
 
+    @GetMapping("/user/id")
+    public ResponseEntity<?> getCalendarGroups (
+            HttpServletRequest req
+    ){
+        Object idObj = req.getAttribute("id");
+        Long id;
+        if (idObj != null) {
+            id = Long.valueOf(idObj.toString());  // 문자열을 Long으로 변환
+        } else {
+            id= 0L;
+        }
+
+        return ResponseEntity.ok(id);
+    }
+
 
 }
