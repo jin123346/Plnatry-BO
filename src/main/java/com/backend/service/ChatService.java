@@ -6,6 +6,7 @@ import com.backend.document.chat.ChatMessageDocument;
 import com.backend.document.chat.ChatRoomDocument;
 import com.backend.dto.chat.ChatMessageDTO;
 import com.backend.dto.chat.ChatRoomDTO;
+import com.backend.dto.chat.NotificationResponse;
 import com.backend.entity.user.User;
 import com.backend.repository.chat.ChatMapperRepository;
 import com.backend.repository.chat.ChatMemberRepository;
@@ -19,9 +20,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 
 @Log4j2
 @RequiredArgsConstructor
@@ -90,6 +89,38 @@ public class ChatService {
         return chatRoomDTOS;
     }
 
+    public void updateUnreadCountsAndLastMessage(String chatRoomId, String senderId) {
+        // 사용자가 참여한 채팅방 가져오기
+        List<ChatMapperDocument> userChatMappings = chatMapperRepository.findByChatRoomId(chatRoomId);
+        log.info("userChatMappings: " + userChatMappings);
+        for (ChatMapperDocument mapper : userChatMappings) {
+            String userId = mapper.getUserId();
+            log.info("userId: " + userId);
+            if (!userId.equals(senderId)) {
+                // 해당 사용자의 읽지 않은 메시지 수 업데이트
+                long count = getUnreadMessageCount(senderId, chatRoomId).getCount();
+                log.info("count: " + count);
+                // 읽지 않은 메시지 수 알림 전송
+                NotificationResponse notification = new NotificationResponse();
+                notification.setType("unreadCount");
+                notification.setChatRoomId(chatRoomId);
+                notification.setUnreadCount((int) count);
+                log.info("notification : ", notification);
+                messagingTemplate.convertAndSend("/topic/notifications/" + userId, notification);
+                // 마지막 메시지 알림 전송
+                String lastMessage = chatMessageRepository.findFirstByRoomIdOrderByTimeStampDesc(chatRoomId).getContent();
+                log.info("lastMessage: " + lastMessage);
+                NotificationResponse lastMessageNotification = new NotificationResponse();
+                lastMessageNotification.setType("lastMessage");
+                lastMessageNotification.setChatRoomId(chatRoomId);
+                lastMessageNotification.setLastMessage(lastMessage);
+                log.info("lastMessageNotification : ", lastMessageNotification);
+                messagingTemplate.convertAndSend("/topic/notifications/" + userId, lastMessageNotification);
+            }
+        }
+    }
+
+
     public ChatMemberDocument saveChatMember(String chatRoomId, User user, String groupName) {
         ChatMemberDocument chatMemberDocument = new ChatMemberDocument();
         chatMemberDocument.setUid(user.getUid());
@@ -114,15 +145,11 @@ public class ChatService {
     }
 
     public String updateChatMemberFavorite(String email, ChatMemberDocument frequentMember, String type) {
-        log.info("frequentMember: " + frequentMember);
         ChatMemberDocument loginUser = chatMemberRepository.findByEmail(email);
-        log.info("loginUser: " + loginUser);
         if (loginUser != null && Objects.equals(type, "insert")) {
             if (!loginUser.getFrequent_members().contains(frequentMember)) {
-                log.info("중복 없음 - 추가");
                 loginUser.getFrequent_members().add(frequentMember);
             } else {
-                log.info("중복 있음 - 무효");
                 return "duplicate";
             }
             chatMemberRepository.save(loginUser);
@@ -138,7 +165,6 @@ public class ChatService {
     public ChatMemberDocument findChatMember(String uid) {
         if (chatMemberRepository.findByUid(uid) != null) {
             ChatMemberDocument document = chatMemberRepository.findByUid(uid);
-            log.info("document: " + document);
             return document;
         }
         return null;
@@ -151,7 +177,7 @@ public class ChatService {
             ChatRoomDocument chatRoomDocument = optionalChatRoomDocument.get();
             if (chatRoomDocument.getMembers().contains(uid)) {
                 chatRoomDocument.getMembers().remove(uid);
-            }else if (chatRoomDocument.getLeader().equals(uid)) {
+            } else if (chatRoomDocument.getLeader().equals(uid)) {
                 chatRoomDocument.setLeader(null);
             }
             chatRoomRepository.save(chatRoomDocument);
@@ -160,7 +186,6 @@ public class ChatService {
     }
 
     public ChatMessageDocument saveMessage(ChatMessageDTO chatMessageDTO) {
-        log.info("chatMessageDTO: " + chatMessageDTO);
         ChatMessageDocument chatMessageDocument = chatMessageDTO.toDocument();
         if (chatMessageDocument != null) {
             ChatMessageDocument savedDocument = chatMessageRepository.save(chatMessageDocument);
@@ -171,7 +196,6 @@ public class ChatService {
 
     // 특정 채팅방의 최신 메시지 로드
     public List<ChatMessageDocument> getLatestMessages(String chatRoomId) {
-        log.info("최신 메시지 로드");
         PageRequest pageRequest = PageRequest.of(0, PAGE_SIZE);
         return chatMessageRepository.findByRoomIdOrderByTimeStampDesc(chatRoomId, pageRequest);
 
@@ -179,15 +203,15 @@ public class ChatService {
 
     // 특정 채팅방의 이전 메시지 로드
     public List<ChatMessageDocument> getOlderMessages(String chatRoomId, LocalDateTime beforeTimestamp) {
-        log.info("이전 메시지 로드");
         PageRequest pageRequest = PageRequest.of(0, PAGE_SIZE);
         return chatMessageRepository.findByRoomIdAndTimeStampBeforeOrderByTimeStampDesc(chatRoomId, beforeTimestamp, pageRequest);
     }
 
     // 사용자가 채팅방을 읽었다고 표시
-    public void markAsRead(String userId, String chatRoomId, LocalDateTime readTimestamp) {
+    public void markAsRead(String userId, String chatRoomId, String readTimestamp) {
         Optional<ChatMapperDocument> chatMapperOpt = chatMapperRepository.findByUserIdAndChatRoomId(userId, chatRoomId);
         ChatMapperDocument chatMapper;
+
         if (chatMapperOpt.isPresent()) {
             chatMapper = chatMapperOpt.get();
         } else {
@@ -202,23 +226,23 @@ public class ChatService {
             chatMapper = ChatMapperDocument.builder()
                     .userId(userId)
                     .chatRoomId(chatRoomId)
-                    .joinedAt(readTimestamp) // 채팅방에 참여한 시간 설정
+                    .joinedAt(LocalDateTime.parse(readTimestamp)) // 채팅방에 참여한 시간 설정
                     .build();
         }
-        chatMapper.setLastReadTimeStamp(readTimestamp);
+        chatMapper.setLastReadTimeStamp(LocalDateTime.parse(readTimestamp));
         chatMapperRepository.save(chatMapper);
     }
 
     // 사용자가 읽지 않은 메시지 수 가져오기
-    public long getUnreadMessageCount(String userId, String chatRoomId) {
-        System.out.println("Calculating unread messages for userId: " + userId + ", chatRoomId: " + chatRoomId);
+    public ChatMessageDTO getUnreadMessageCount(String userId, String chatRoomId) {
 
         Optional<ChatMapperDocument> userChatRoomOpt = chatMapperRepository.findByUserIdAndChatRoomId(userId, chatRoomId);
         if (userChatRoomOpt.isEmpty()) {
-            System.out.println("UserChatRoom not found. Counting all messages.");
             long count = chatMessageRepository.countByRoomIdAndTimeStampAfter(chatRoomId, LocalDateTime.MIN);
-            System.out.println("Unread messages count: " + count);
-            return count;
+            ChatMessageDocument chatMessageDocument = chatMessageRepository.findFirstByRoomIdOrderByTimeStampDesc(chatRoomId);
+            ChatMessageDTO chatMessageDTO = chatMessageDocument.toDTO();
+            chatMessageDTO.setCount(count);
+            return chatMessageDTO;
         }
 
         ChatMapperDocument userChatRoom = userChatRoomOpt.get();
@@ -226,10 +250,10 @@ public class ChatService {
                 ? userChatRoom.getLastReadTimeStamp()
                 : userChatRoom.getJoinedAt(); // lastReadTimestamp가 없으면 joinedAt을 기준으로
 
-        System.out.println("Last read timestamp: " + lastReadTimestamp);
         long count = chatMessageRepository.countByRoomIdAndTimeStampAfter(chatRoomId, lastReadTimestamp);
-        System.out.println("Unread messages count: " + count);
-        return count;
+        ChatMessageDTO chatMessageDTO = new ChatMessageDTO();
+        chatMessageDTO.setCount(count);
+        return chatMessageDTO;
     }
 
 }
