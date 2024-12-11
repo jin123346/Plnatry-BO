@@ -44,6 +44,9 @@ public class Folder {
     private int status = 1; // 상태
 
     @Builder.Default
+    private String sharedUser = "[]";
+
+    @Builder.Default
     private int isPinned = 0; // 1: 고정 폴더
 
     public FolderDto toDTO() {
@@ -60,6 +63,7 @@ public class Folder {
                 .createdAt(this.createdAt)
                 .updatedAt(this.updatedAt)
                 .isShared(this.isShared)
+                .sharedUser(this.sharedUser)
                 .linkSharing(this.linkSharing)
                 .status(this.status)
                 .isPinned(this.isPinned)
