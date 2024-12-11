@@ -55,7 +55,7 @@ public class FolderService {
 
         if(request.getParentFolder() != null){
             FolderDto folderDto = request.getParentFolder();
-            Folder exisitingFolder = folderMogoRepository.findFolderByNameAndParentId(request.getName(),folderDto.getId());
+            Folder exisitingFolder = folderMogoRepository.findFolderByNameAndParentIdAndStatusIsNot(request.getName(),folderDto.getId(),0);
             if(exisitingFolder != null){
                 log.info("이미 존재하는 폴더 :{}",exisitingFolder.getName());
                 return exisitingFolder.getId();
@@ -80,6 +80,7 @@ public class FolderService {
                    .ownerId(uid)
                    .description(request.getDescription())
                    .status(1)
+                   .sharedUser("[]")
                    .isShared(request.getIsShared())
                    .linkSharing(request.getLinkSharing())
                    .updatedAt(LocalDateTime.now())
@@ -162,7 +163,7 @@ public class FolderService {
         return folderMogoRepository.findByName(uid);
     }
     public Folder existFolder(String name,String parentId){
-        return folderMogoRepository.findFolderByNameAndParentId(name,parentId);
+        return folderMogoRepository.findFolderByNameAndParentIdAndStatusIsNot(name,parentId,0);
     }
 
     public List<FolderDto> getSubFolders(String ownerId, String folderId){

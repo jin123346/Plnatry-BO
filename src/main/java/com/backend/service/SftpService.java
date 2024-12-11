@@ -429,7 +429,8 @@ public class SftpService {
 
 
     public boolean makeZip(String path, String folderName) {
-        String tmp = "~/"+BASE_SFTP_DIR + "zip/" + folderName + ".zip";
+        String escapedFolderName = folderName.replace("(", "\\(").replace(")", "\\)");
+        String tmp = "~/"+BASE_SFTP_DIR + "zip/" + escapedFolderName + ".zip";
         log.info("경로!!"+path);
 
         String remoteDir = "";

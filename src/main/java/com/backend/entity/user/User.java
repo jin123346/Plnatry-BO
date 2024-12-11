@@ -219,6 +219,7 @@ public class User {
                 .uid(this.uid)
                 .grade(this.grade)
                 .role(this.role)
+                .company(this.company)
                 .id(this.id)
                 .build();
     }
