@@ -22,7 +22,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry
-                .addEndpoint("/ws-calendar","/ws-editor", "/ws-chat","/ws-progress")
+                .addEndpoint("/ws-calendar","/ws-editor", "/ws-chat", "/ws-alert","/ws-progress")
                 .setAllowedOriginPatterns("*");
     }
 

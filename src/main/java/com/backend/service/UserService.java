@@ -1,9 +1,9 @@
 package com.backend.service;
-import com.backend.document.user.AttendanceTime;
 import com.backend.dto.chat.UsersWithGroupNameDTO;
 import com.backend.dto.request.admin.user.PatchAdminUserApprovalDto;
 import com.backend.dto.request.user.EmailDTO;
 import com.backend.dto.request.user.PaymentInfoDTO;
+import com.backend.dto.request.user.PostUserAlarmDto;
 import com.backend.dto.request.user.PostUserRegisterDTO;
 import com.backend.dto.response.GetAdminUsersRespDto;
 import com.backend.dto.response.admin.user.GetGroupUsersDto;
@@ -11,12 +11,14 @@ import com.backend.dto.response.user.GetUsersAllDto;
 import com.backend.dto.response.user.TermsDTO;
 import com.backend.entity.group.Group;
 import com.backend.entity.group.GroupMapper;
+import com.backend.entity.user.Alert;
 import com.backend.entity.user.CardInfo;
 import com.backend.entity.user.Terms;
 import com.backend.entity.user.User;
 import com.backend.repository.GroupMapperRepository;
 import com.backend.repository.GroupRepository;
 import com.backend.repository.UserRepository;
+import com.backend.repository.user.AlertRepository;
 import com.backend.repository.user.AttendanceTimeRepository;
 import com.backend.repository.user.CardInfoRepository;
 import com.backend.repository.user.TermsRepository;
@@ -43,6 +45,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
@@ -65,6 +68,8 @@ public class UserService {
     private final AttendanceTimeRepository attendanceTimeRepository;
     @Autowired
     private final RedisTemplate<String, String> redisTemplate;
+    @Autowired
+    private AlertRepository alertRepository;
 
     public List<GetAdminUsersRespDto> getUserNotTeamLeader() {
         List<User> users = userRepository.findAllByRole(Role.WORKER);
@@ -357,17 +362,27 @@ public class UserService {
         }
     }
 
-    public ResponseEntity<?> goToWork(String uid, LocalDateTime start) {
-        LocalDate date = LocalDate.now();
-        LocalTime checkInTime = LocalTime.now();
-        Optional<AttendanceTime> optAttendance = attendanceTimeRepository.findByUserIdAndDate(uid, date);
-        if (optAttendance.isPresent()) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body("이미 출근 기록이 있습니다.");
+
+    public ResponseEntity<?> postAlert(PostUserAlarmDto dto, Long id) {
+        Optional<User> user = userRepository.findById(id);
+        if(user.isEmpty()){
+            return ResponseEntity.badRequest().body("로그인 정보가 일치하지않습니다...");
         }
-        AttendanceTime.builder()
-                .userId(uid)
-                .checkInTime(checkInTime)
+        LocalDateTime now = LocalDateTime.now();
+
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        String formattedNow = now.format(formatter);
+        Alert alert = Alert.builder()
+                .user(user.get())
+                .title(dto.getTitle())
+                .status(2)
+                .content(dto.getContent())
+                .createAt(formattedNow)
                 .build();
-        return null;
+
+        alertRepository.save(alert);
+
+        return ResponseEntity.ok("성공");
     }
+
 }
