@@ -188,20 +188,13 @@ public class ProjectService {
     public ProjectTask saveTask(GetProjectTaskDTO taskDTO) {
         ProjectTask task = taskDTO.toProjectTask();
         log.info("saveTask 1 : " + task);
-        if (task.getId() == null) {
-            ProjectColumn col = columnRepository.findById(task.getColumn().getId())
-                    .orElseThrow(() -> new RuntimeException("Column not found"));
-            col.addTask(task);
-            log.info("saveTask 2 : " + task);
-            log.info("saveTask 3 : " + col);
-            return taskRepository.save(task);
-        } else {
-            ProjectTask existingTask = taskRepository.findById(task.getId()).orElseThrow(() -> new RuntimeException("Task not found"));
-            existingTask.setColumn(task.getColumn());
-            log.info("saveTask 4 : " + existingTask);
+        ProjectColumn col = columnRepository.findById(task.getColumn().getId())
+                .orElseThrow(() -> new RuntimeException("Column not found"));
+        col.addTask(task);
+        log.info("saveTask 2 : " + task);
+        log.info("saveTask 3 : " + col);
+        return taskRepository.save(task);
 
-            return existingTask;
-        }
     }
     public boolean delete(String type, Long id) {
         try {
