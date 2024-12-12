@@ -2,6 +2,7 @@ package com.backend.entity.group;
 
 import com.backend.dto.response.GetAdminUsersRespDto;
 import com.backend.entity.user.User;
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -19,6 +20,7 @@ public class GroupMapper {
 
     @ManyToOne
     @JoinColumn(name = "group_id")
+    @JsonBackReference
     private Group group;  // 그룹
 
     @ManyToOne

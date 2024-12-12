@@ -64,17 +64,15 @@ public class ChatController {
 
         String roomId = chatService.createChatRoom(chatRoomDTO);
 
-        User user = userService.getUserByuid(chatRoomDTO.getLeader());
-
-        String groupName = groupService.findGroupNameByUser(user);
-
-        ChatMemberDocument savedDocument = chatService.saveChatMember(roomId, user, groupName);
-
-        if (savedDocument != null) {
-            return ResponseEntity.ok("success");
+        if (roomId == null) {
+            return ResponseEntity.noContent().build();
         } else {
-            return ResponseEntity.ok("error");
+            User user = userService.getUserByuid(chatRoomDTO.getLeader());
+
+            String groupName = groupService.findGroupNameByUser(user);
+
         }
+        return null;
     }
 
     @DeleteMapping("/quitRoom")
@@ -117,6 +115,7 @@ public class ChatController {
 
     @PostMapping("/saveMessage")
     public ResponseEntity<ChatMessageDocument> saveMessage(@RequestBody ChatMessageDTO chatMessageDTO) {
+        log.info("시간 : " + chatMessageDTO.getTimeStamp());
         ChatMessageDocument savedDocument = chatService.saveMessage(chatMessageDTO);
         if (savedDocument != null) {
             return ResponseEntity.ok(savedDocument);
@@ -157,11 +156,12 @@ public class ChatController {
     // 읽음 상태 업데이트
     @PostMapping("/markAsRead")
     public void markAsRead(
-            @RequestParam String uid,
-            @RequestParam String chatRoomId,
-            @RequestParam String readTimestamp // ISO 8601 형식
+           @RequestBody ChatMessageDTO chatMessageDTO
     ) {
-        chatService.markAsRead(uid, chatRoomId, readTimestamp);
+        log.info("markAsRead - chatMessageDTO : " + chatMessageDTO);
+        String uid = chatMessageDTO.getSender();
+        String chatRoomId = chatMessageDTO.getRoomId();
+        chatService.markAsRead(uid, chatRoomId);
     }
 
     @MessageMapping("/chat.sendMessage")
@@ -173,7 +173,7 @@ public class ChatController {
         messagingTemplate.convertAndSend("/topic/chat/" + chatMessageDocument.getRoomId(), chatMessageDocument);
 
         // 읽지 않은 메시지 수 및 마지막 메시지 업데이트
-        chatService.updateUnreadCountsAndLastMessage(chatMessageDocument.getRoomId(), chatMessageDocument.getSender());
+        chatService.updateUnreadCountsAndLastMessageAndLastTimeStamp(chatMessageDocument.getRoomId(), chatMessageDocument.getSender());
     }
 
 

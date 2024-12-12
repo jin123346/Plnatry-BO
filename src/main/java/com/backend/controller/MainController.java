@@ -1,6 +1,7 @@
 package com.backend.controller;
 
 import com.backend.dto.request.user.PostUserAlarmDto;
+import com.backend.repository.UserRepository;
 import com.backend.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class MainController {
 
     private final UserService userService;
+    private final UserRepository userRepository;
 
     @GetMapping(value = {"/","/index"})
     public ResponseEntity<?> index() {
@@ -24,11 +26,8 @@ public class MainController {
         return ResponseEntity.ok("SU");
     }
 
-    @PostMapping("/api/alert")
-    public ResponseEntity<?> postAlert(
-            @RequestBody PostUserAlarmDto dto,
-            HttpServletRequest req
-    ){
+    @GetMapping("/api/user/name")
+    public ResponseEntity<?> getUserName(HttpServletRequest req) {
         Object idObj = req.getAttribute("id");
         Long id;
         if (idObj != null) {
@@ -36,9 +35,8 @@ public class MainController {
         } else {
             id= 0L;
         }
-        ResponseEntity<?> response = userService.postAlert(dto,id);
-
-        return ResponseEntity.ok(response);
+        String username = userRepository.findById(id).get().getName();
+        return ResponseEntity.ok(username);
     }
 
 }

@@ -51,4 +51,31 @@ public class PageService {
         List<Page> list = pageRepository.findByOwnerUid(uid);
         return list;
     }
+
+    public ResponseEntity<?> getPageContent(String pageId, Long userId) {
+        Optional<Page> page = pageRepository.findById(pageId);
+        if(page.isEmpty()){
+            return ResponseEntity.badRequest().body("페이지가 없습니다...");
+        }
+        PageDto dto = PageDto.builder()
+                .ownerUid(page.get().getOwnerUid())
+                .title(page.get().getTitle())
+                .content(page.get().getContent())
+                .createAt(page.get().getCreateAt())
+                .updateAt(page.get().getUpdateAt())
+                .id(page.get().getId())
+                .build();
+
+        return ResponseEntity.ok(dto);
+    }
+
+    public ResponseEntity<?> putPageContent(PageDto dto, Long userId) {
+        Optional<Page> page = pageRepository.findById(dto.getId());
+        if(page.isEmpty()){
+            return ResponseEntity.badRequest().body("페이지가 없습니다...");
+        }
+        page.get().putData(dto);
+        pageRepository.save(page.get());
+        return ResponseEntity.ok("수정 성공");
+    }
 }

@@ -7,25 +7,20 @@ import com.backend.dto.response.admin.project.GetProjectLeaderDto;
 import com.backend.dto.response.admin.project.GetProjects;
 import com.backend.dto.response.project.GetProjectColumnDTO;
 import com.backend.dto.response.project.GetProjectDTO;
+import com.backend.dto.response.project.GetProjectSubTaskDTO;
 import com.backend.dto.response.project.GetProjectTaskDTO;
 import com.backend.dto.response.user.GetUsersAllDto;
 import com.backend.entity.calendar.CalendarMapper;
 import com.backend.entity.group.Group;
 import com.backend.entity.group.GroupLeader;
 import com.backend.entity.group.GroupMapper;
-import com.backend.entity.project.Project;
-import com.backend.entity.project.ProjectColumn;
-import com.backend.entity.project.ProjectCoworker;
-import com.backend.entity.project.ProjectTask;
+import com.backend.entity.project.*;
 import com.backend.entity.user.User;
 import com.backend.repository.GroupLeaderRepository;
 import com.backend.repository.GroupRepository;
 import com.backend.repository.UserRepository;
 import com.backend.repository.calendar.CalendarMapperRepository;
-import com.backend.repository.project.ProjectColumnRepository;
-import com.backend.repository.project.ProjectCoworkerRepository;
-import com.backend.repository.project.ProjectRepository;
-import com.backend.repository.project.ProjectTaskRepository;
+import com.backend.repository.project.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.http.ResponseEntity;
@@ -56,11 +51,12 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ProjectService {
     private final UserRepository userRepository;
+    private final GroupRepository groupRepository;
     private final ProjectRepository projectRepository;
     private final ProjectCoworkerRepository coworkerRepository;
-    private final GroupRepository groupRepository;
     private final ProjectColumnRepository columnRepository;
     private final ProjectTaskRepository taskRepository;
+    private final ProjectSubTaskRepository subTaskRepository;
 
     public Project createProject(PostProjectDTO postDTO, String username) {
 
@@ -188,33 +184,12 @@ public class ProjectService {
     public ProjectTask saveTask(GetProjectTaskDTO taskDTO) {
         ProjectTask task = taskDTO.toProjectTask();
         log.info("saveTask 1 : " + task);
-        if (task.getId() == null) {
-            ProjectColumn col = columnRepository.findById(task.getColumn().getId())
-                    .orElseThrow(() -> new RuntimeException("Column not found"));
-            col.addTask(task);
-            log.info("saveTask 2 : " + task);
-            log.info("saveTask 3 : " + col);
-            return taskRepository.save(task);
-        } else {
-            ProjectTask existingTask = taskRepository.findById(task.getId()).orElseThrow(() -> new RuntimeException("Task not found"));
-            existingTask.setColumn(task.getColumn());
-            log.info("saveTask 4 : " + existingTask);
-
-            return existingTask;
-        }
-    }
-    public boolean delete(String type, Long id) {
-        try {
-            switch (type) {
-                case "task" -> taskRepository.deleteById(id);
-                case "column" -> columnRepository.deleteById(id);
-                case "project" -> projectRepository.deleteById(id);
-            }
-            return true;
-        }catch (Exception e){
-            log.error(e.getMessage());
-            return false;
-        }
+        ProjectColumn col = columnRepository.findById(task.getColumn().getId())
+                .orElseThrow(() -> new RuntimeException("Column not found"));
+        col.addTask(task);
+        log.info("saveTask 2 : " + task);
+        log.info("saveTask 3 : " + col);
+        return task;
     }
 
     public void updateCoworkers(PatchCoworkersDTO dto) {
@@ -229,7 +204,6 @@ public class ProjectService {
                         .ifPresent(project::removeCoworker);
             });
         }
-
         if (dto.getAddedCoworkers() != null) {
             dto.getAddedCoworkers().forEach(userId -> {
                 User user = userRepository.findById(userId)
@@ -241,7 +215,31 @@ public class ProjectService {
                         .build());
             });
         }
+    }
+    public GetProjectSubTaskDTO insertSubTask(GetProjectSubTaskDTO dto){
+        ProjectSubTask entity = ProjectSubTask.builder().name(dto.getName()).isChecked(false).build();
+        ProjectTask task = taskRepository.findById(dto.getTaskId()).orElseThrow();
+        task.addSubTask(entity);
+        return entity.toDTO();
+    }
+    public boolean clickSubTask(Long id){
+        ProjectSubTask subTask = subTaskRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("작업자를 찾을 수 없습니다. ID: " + id));
+        subTask.click();
+        return subTask.isChecked();
+    }
 
+    public boolean delete(String type, Long id) {
+        try {
+            switch (type) {
+                case "task" -> taskRepository.deleteById(id);
+                case "column" -> columnRepository.deleteById(id);
+                case "project" -> projectRepository.deleteById(id);
+            }
+            return true;
+        }catch (Exception e){
+            log.error(e.getMessage());
+            return false;
+        }
     }
 
     public ResponseEntity<?> getProjects(String company, String group) {
