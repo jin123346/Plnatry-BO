@@ -47,4 +47,6 @@ public class UserDto {
     @ToString.Exclude
     private List<Attendance> attendance;
 
+    private Long groupId;
+
 }
