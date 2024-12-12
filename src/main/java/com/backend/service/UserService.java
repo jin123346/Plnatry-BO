@@ -402,6 +402,24 @@ public class UserService {
     }
 
 
+    public UserDto getSliceUser(Long userId) {
+        User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("유저 정보를 찾을 수 없습니다."));
+        Group group = user.getGroupMappers().stream()
+                .map(GroupMapper::getGroup)
+                .findFirst()
+                .orElse(null);
+        UserDto userDto= user.toSliceDto();
+        if(group != null){
+            String department = group.getName();
+            long groupId = group.getId();
+            userDto.setDepartment(department);
+            userDto.setGroupId(groupId);
+        }
+        return userDto;
+    }
+
+
+
 //    public Boolean uploadProfile(Long userId, MultipartFile file) {
 //
 //        User user = userRepository.findById(userId);
