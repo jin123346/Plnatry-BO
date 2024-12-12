@@ -21,5 +21,7 @@ public interface ChatMessageRepository extends MongoRepository<ChatMessageDocume
 
     // 읽지 않은 메시지 카운트
     long countByRoomIdAndTimeStampAfter(String chatRoomId, LocalDateTime timestamp);
+
+    ChatMessageDocument findFirstByRoomIdOrderByTimeStampDesc(String chatRoomId);
 }
 

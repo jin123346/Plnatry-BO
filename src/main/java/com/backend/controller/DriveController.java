@@ -122,18 +122,28 @@ public class DriveController {
             return ResponseEntity.ok().body("No folders found.");
         }
         List<FolderDto> folderDtoList =  folderService.getFoldersByUid(uid, rootFolder.getId());
-        log.info("folderLIst!!!!"+folderDtoList);
-        long  result  = sftpService.calculatedSize(uid);
+
+
 
 
         FolderResponseDto folderResponseDto  = FolderResponseDto.builder()
                 .folderDtoList(folderDtoList)
                 .uid(uid)
-                .size(result)
                 .build();
 
         return ResponseEntity.ok().body(folderResponseDto);
 
+    }
+
+    @GetMapping("/size")
+    public ResponseEntity getSize(HttpServletRequest request){
+        String uid= (String) request.getAttribute("uid");
+        if (uid == null || uid.isEmpty()) {
+            return ResponseEntity.badRequest().body("UID is required.");
+        }
+        long  result  = sftpService.calculatedSize(uid);
+
+        return  ResponseEntity.ok().body(result);
     }
 
 
@@ -141,6 +151,8 @@ public class DriveController {
     @GetMapping("/folder-contents")
     public ResponseEntity<Map<String, Object>> getFolderContents(HttpServletRequest request,@RequestParam String folderId,@RequestParam(required = false) String ownerId){
         Map<String,Object> response = new HashMap<>();
+
+        FolderDto parentFolder = folderService.getParentFolder(folderId);
         //폴더 가져오기
         String uid = (String) request.getAttribute("uid");
         List<FolderDto> subFolders = folderService.getSubFolders(uid,folderId);
@@ -150,6 +162,7 @@ public class DriveController {
 
 
         response.put("files",files);
+        response.put("parentFolder",parentFolder);
         response.put("subFolders", subFolders);
         response.put("uid",uid);
         log.info("subFolders:"+subFolders);
@@ -247,7 +260,6 @@ public class DriveController {
                 }
 
                 String currentParentId = folderId; // 초기 Parent ID는 최상위 폴더 ID
-                updateAndSendProgress(uid, i + 1, files.size());
 
                 for (String folder : folderList) {
                     String folderOrFileName = folder;
@@ -274,6 +286,8 @@ public class DriveController {
                 }
                 folderService.saveFileToFolder(file, currentParentId, fileOrder, uid);
                 fileOrder += 100;
+                updateAndSendProgress(uid, i + 1, files.size());
+
             }
             return ResponseEntity.ok("파일 업로드 성공");
         } catch (MaxUploadSizeExceededException e) {

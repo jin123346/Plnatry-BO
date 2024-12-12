@@ -384,4 +384,13 @@ public class UserService {
         return ResponseEntity.ok("성공");
     }
 
+
+    public long findGroupByUserUid(String uid) {
+        Optional<GroupMapper> opt = groupMapperRepository.findGroupByUserUid(uid);
+        if(opt.isPresent()){
+            return opt.get().getId();
+        }
+        return 0;
+    }
+
 }

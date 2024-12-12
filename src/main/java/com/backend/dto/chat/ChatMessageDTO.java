@@ -23,6 +23,7 @@ public class ChatMessageDTO {
     private String fileUrl; // 파일 Url
     private String sender; // 보낸 사람 아이디
     private LocalDateTime timeStamp; // 보낸 시간
+    private long count;
 
     public ChatMessageDocument toDocument() {
         return ChatMessageDocument.builder()
