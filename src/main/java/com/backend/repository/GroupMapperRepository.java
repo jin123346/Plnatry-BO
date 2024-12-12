@@ -40,5 +40,4 @@ public interface GroupMapperRepository extends JpaRepository<GroupMapper, Long> 
 
      Long countGroupMapperByGroup_Id(Long groupId);
 
-    Optional<GroupMapper> findGroupByUserUid(String uid);
 }
