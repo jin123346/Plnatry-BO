@@ -221,6 +221,4 @@ public class CalendarController {
         return response;
     }
 
-
-
 }
