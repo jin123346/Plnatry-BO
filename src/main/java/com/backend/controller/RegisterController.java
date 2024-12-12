@@ -1,9 +1,13 @@
 package com.backend.controller;
 
+import com.backend.document.chat.ChatMemberDocument;
 import com.backend.dto.request.user.*;
 import com.backend.dto.response.user.TermsDTO;
+import com.backend.entity.group.GroupMapper;
 import com.backend.entity.user.CardInfo;
 import com.backend.entity.user.User;
+import com.backend.service.ChatService;
+import com.backend.service.GroupService;
 import com.backend.service.UserService;
 import com.backend.util.Role;
 import jakarta.transaction.Transactional;
@@ -24,6 +28,8 @@ import java.util.List;
 public class RegisterController {
 
     private final UserService userService;
+    private final ChatService chatService;
+    private final GroupService groupService;
 
     @GetMapping("/terms")
     public ResponseEntity<?> termsList(){
@@ -119,7 +125,24 @@ public class RegisterController {
             if (cardInfo != null) {
                 cardInfo.updateUserid(userId);
             }
-            return ResponseEntity.ok().body("success");
+
+            // 12.12 전규찬 채팅용 유저 등록 기능 추가
+            User user = userService.getUserByuid(dto.getUid());
+            String groupName = groupService.findGroupNameByUser(user);
+
+            ChatMemberDocument chatMemberDocument = ChatMemberDocument.builder()
+                    .uid(dto.getUid())
+                    .name(dto.getName())
+                    .email(dto.getEmail())
+                    .level(dto.getGrade())
+                    .group(groupName)
+                    .build();
+
+            ChatMemberDocument savedDocument = chatService.saveChatMember(chatMemberDocument);
+            if (savedDocument != null) {
+                return ResponseEntity.ok().body("success");
+            }
+            return ResponseEntity.ok().body("failed");
         } catch (Exception e) {
             log.error("회원가입 처리 중 오류", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("server error");
