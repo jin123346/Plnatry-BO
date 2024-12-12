@@ -342,12 +342,6 @@ public class UserService {
         return dtos;
     }
 
-    // 12.06 사용자 아이디로 소속 부서 id 추출
-    public List<Group> getGroupsByUserUid(String uid) {
-        log.info("내 아이디는 받아오나"+uid);
-        return groupMapperRepository.findGroupsByUserUid(uid);
-    }
-
     public Boolean validateCompany(String company) {
         Page<User> user = userRepository.findAllByCompany(company, Pageable.unpaged());
         if(user.isEmpty()){
@@ -385,7 +379,7 @@ public class UserService {
     public long findGroupByUserUid(String uid) {
         Optional<GroupMapper> opt = groupMapperRepository.findGroupByUserUid(uid);
         if(opt.isPresent()){
-            return opt.get().getId();
+            return opt.get().getGroup().getId();
         }
         return 0;
     }

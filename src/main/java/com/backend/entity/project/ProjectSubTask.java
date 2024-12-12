@@ -34,4 +34,8 @@ public class ProjectSubTask { //Task 내부 체크리스트
                 .taskId(task.getId())
                 .build();
     }
+
+    public void click(){
+        isChecked = !isChecked;
+    }
 }
