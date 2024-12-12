@@ -48,6 +48,8 @@ public class UserDto {
     @ToString.Exclude
     private List<Attendance> attendance;
 
+    //추가필드
     private Long groupId;
+    private String permission;
 
 }

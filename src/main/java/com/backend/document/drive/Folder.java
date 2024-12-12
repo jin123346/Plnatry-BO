@@ -75,4 +75,6 @@ public class Folder {
     }
 
     public void moveOrder(double newOrder){this.order = newOrder;}
+
+    public void updateSharedUser(String newSharedUser){this.sharedUser = newSharedUser;}
 }
