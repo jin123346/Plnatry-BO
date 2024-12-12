@@ -4,6 +4,7 @@ import com.backend.dto.request.user.*;
 import com.backend.dto.response.user.TermsDTO;
 import com.backend.entity.user.CardInfo;
 import com.backend.entity.user.User;
+import com.backend.service.AttendanceService;
 import com.backend.service.UserService;
 import com.backend.util.Role;
 import jakarta.transaction.Transactional;
@@ -24,6 +25,7 @@ import java.util.List;
 public class RegisterController {
 
     private final UserService userService;
+    private final AttendanceService attendanceService;
 
     @GetMapping("/terms")
     public ResponseEntity<?> termsList(){
@@ -111,14 +113,14 @@ public class RegisterController {
                 dto.setPaymentId(cardInfo.getCardId());
             }
 
-            Long userId = userService.insertUser(dto);
-            if (userId == null) {
+            User user = userService.insertUser(dto);
+            if (user == null) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Not Create");
             }
 
-            if (cardInfo != null) {
-                cardInfo.updateUserid(userId);
-            }
+            cardInfo.updateUserid(user.getId());
+            attendanceService.insertAttendance(user);
+
             return ResponseEntity.ok().body("success");
         } catch (Exception e) {
             log.error("회원가입 처리 중 오류", e);

@@ -114,6 +114,10 @@ public class User {
     @ToString.Exclude
     private List<FavoriteBoard> favoriteBoards = new ArrayList<>(); // 즐겨찾기 목록
 
+    @Column(name="annual_vacation")
+    @Builder.Default
+    private Integer annualVacation = 15;
+
     public String selectLevelString(){
         return switch (level) {
             case 1 -> "사원";
@@ -191,7 +195,7 @@ public class User {
                 .id(this.id)
                 .status(this.status)
                 .uid(this.uid)
-                .pwd(this.pwd)
+                .pwd(null)
                 .role(this.role)
                 .level(this.level)
                 .grade(this.grade)
@@ -202,14 +206,15 @@ public class User {
                 .country(this.country)
                 .addr2(this.addr2)
                 .company(this.company)
+                .companyName(this.companyName)
                 .paymentId(this.paymentId)
                 .day(this.day)
-                .groupMappers(this.groupMappers)
+//                .groupMappers(this.groupMappers)
                 .profileImg(this.profileImg != null ? this.profileImg.getSName() : "default.png") // 기본값 설정
                 .createAt(this.createAt)
                 .lastLogin(this.lastLogin)
                 .joinDate(this.joinDate)
-                .attendance(this.attendance)
+//                .attendance(this.attendance)
                 .build();
     }
 

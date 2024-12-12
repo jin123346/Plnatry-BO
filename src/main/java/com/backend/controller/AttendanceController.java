@@ -7,6 +7,7 @@ import com.backend.service.UserService;
 import lombok.Builder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -58,7 +59,25 @@ public class AttendanceController {
     public ResponseEntity<?> checkOut(Authentication auth){
         Long uid = Long.parseLong(auth.getName());
         log.info("겟네임 "+uid);
-        return attendanceService.leaveWork(uid);
+        try {
+            return attendanceService.leaveWork(uid);
+        }catch (Exception e){
+            return ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "서버 오류가 발생했습니다."));
+        }
+    }
+
+    @GetMapping("/myAttendance")
+    public ResponseEntity<?> getAttendance(Authentication auth){
+        Long uid = Long.parseLong(auth.getName());
+        try {
+            return attendanceService.getAttendance(uid);
+        }catch (Exception e){
+            return ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", e.getMessage()));
+        }
     }
 
     @PostMapping("/reqVacation")
