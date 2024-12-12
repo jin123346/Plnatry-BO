@@ -1,5 +1,7 @@
 package com.backend.config;
 
+import com.backend.util.mongo.DateToLocalDateTimeConverter;
+import com.backend.util.mongo.LocalDateTimeToDateConverter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -9,8 +11,10 @@ import org.springframework.data.mongodb.MongoDatabaseFactory;
 import org.springframework.data.mongodb.config.MongoConfigurationSupport;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.SimpleMongoClientDatabaseFactory;
+import org.springframework.data.mongodb.core.convert.MongoCustomConversions;
 
 import java.time.LocalDate;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 
@@ -28,6 +32,14 @@ public class MongoConfig {
     @Bean
     MongoTemplate mongoTemplate() {
         return new MongoTemplate(mongoDbFactory());
+    }
+
+    @Bean
+    public MongoCustomConversions customConversions() {
+        return new MongoCustomConversions(Arrays.asList(
+                new LocalDateTimeToDateConverter(),
+                new DateToLocalDateTimeConverter()
+        ));
     }
 
 //    @Override
