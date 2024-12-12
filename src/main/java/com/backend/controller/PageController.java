@@ -5,11 +5,14 @@ import com.backend.dto.request.page.PageDto;
 import com.backend.entity.folder.Permission;
 import com.backend.service.mongoDB.PageService;
 import com.backend.util.PermissionType;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.messaging.handler.annotation.MessageMapping;
+import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -82,4 +85,28 @@ public class PageController {
         return ResponseEntity.ok().body(pages);
 
     }
+
+    @GetMapping("/content")
+    public ResponseEntity<?> getPageContent(
+            HttpServletRequest req,
+            @RequestParam String pageId
+    ){
+        Long userId = (Long)req.getAttribute("id");
+        ResponseEntity<?> response = pageService.getPageContent(pageId,userId);
+        return response;
+    }
+
+    @PutMapping("/content")
+    public ResponseEntity<?> putPageContent(
+            HttpServletRequest req,
+            @RequestBody PageDto dto
+    ){
+        System.out.println("이거되고있냐????");
+        System.out.println(dto);
+        Long userId = (Long)req.getAttribute("id");
+        ResponseEntity<?> response = pageService.putPageContent(dto,userId);
+        return response;
+    }
+
+
 }

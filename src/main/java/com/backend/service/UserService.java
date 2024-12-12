@@ -376,6 +376,7 @@ public class UserService {
                 .status(2)
                 .content(dto.getContent())
                 .createAt(formattedNow)
+                .type(1)
                 .build();
 
         alertRepository.save(alert);
