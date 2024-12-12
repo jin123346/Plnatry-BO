@@ -4,6 +4,7 @@ import com.backend.dto.request.LoginDto;
 import com.backend.dto.response.UserDto;
 import com.backend.entity.user.User;
 import com.backend.repository.UserRepository;
+import com.backend.service.UserService;
 import com.backend.util.jwt.JwtTokenProvider;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.http.Cookie;
@@ -34,6 +35,7 @@ public class AuthController {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final RedisTemplate redisTemplate;
+    private final UserService userService;
 
     @GetMapping("/test")
     public ResponseEntity<?> testapi (){
@@ -66,10 +68,17 @@ public class AuthController {
             cookie.setMaxAge(60*60*24*7);
             resp.addCookie(cookie);
 
+
+            long groupId = userService.findGroupByUserUid(userDto.getUid());
+            UserDto userDto1 = user.get().toSliceDto();
+            if(groupId >0){
+                userDto1.setGroupId(groupId);
+            }
+
             Map<String, Object> response = new HashMap<>();
             response.put("token",accessToken);
             response.put("role",user.get().getRole());
-            response.put("user",user.get().toSliceDto());
+            response.put("user",userDto1);
 
             user.get().updateLoginDate(LocalDateTime.now());
             return ResponseEntity.ok().body(response);
