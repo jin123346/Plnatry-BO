@@ -45,4 +45,9 @@ public class UserDto {
     private LocalDate joinDate;
     private String profileImg;
     private String department;
+    @ToString.Exclude
+    private List<Attendance> attendance;
+
+    private Long groupId;
+
 }

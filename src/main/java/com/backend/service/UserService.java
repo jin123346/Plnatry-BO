@@ -1,8 +1,5 @@
 package com.backend.service;
-import com.backend.document.drive.FileMogo;
-import com.backend.document.drive.Folder;
 import com.backend.dto.chat.UsersWithGroupNameDTO;
-import com.backend.dto.request.FileRequestDto;
 import com.backend.dto.request.admin.user.PatchAdminUserApprovalDto;
 import com.backend.dto.request.user.*;
 import com.backend.dto.response.GetAdminUsersRespDto;
@@ -67,7 +64,7 @@ public class UserService {
     private final RedisTemplate<String, String> redisTemplate;
     private final AlertRepository alertRepository;
     private final SftpService sftpService;
-    private final FolderService folderService;
+//    private final FolderService folderService;
 
     public List<GetAdminUsersRespDto> getUserNotTeamLeader() {
         List<User> users = userRepository.findAllByRole(Role.WORKER);
@@ -376,11 +373,21 @@ public class UserService {
                 .status(2)
                 .content(dto.getContent())
                 .createAt(formattedNow)
+                .type(1)
                 .build();
 
         alertRepository.save(alert);
 
         return ResponseEntity.ok("성공");
+    }
+
+
+    public long findGroupByUserUid(String uid) {
+        Optional<GroupMapper> opt = groupMapperRepository.findGroupByUserUid(uid);
+        if(opt.isPresent()){
+            return opt.get().getId();
+        }
+        return 0;
     }
 
 

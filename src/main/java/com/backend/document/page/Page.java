@@ -1,5 +1,6 @@
 package com.backend.document.page;
 
+import com.backend.dto.request.page.PageDto;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
@@ -32,4 +33,13 @@ public class Page {
 
     @LastModifiedDate
     private LocalDateTime updateAt;
+
+    public void putData(PageDto dto) {
+        if(dto.getTitle() != null) {
+            this.title = dto.getTitle();
+        }
+        if(dto.getContent() != null){
+            this.content = dto.getContent();
+        }
+    }
 }
