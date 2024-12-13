@@ -19,6 +19,7 @@ public class Attendance {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
+    @ToString.Exclude
     private User user;  
 
     @Column(name = "`year_month`")
@@ -34,5 +35,13 @@ public class Attendance {
     private int vacationDays; // 휴가일
 
     @Column(name = "overtime_days")
-    private int overtimeDays; // 야근일
+    private int overtimeHours; // 야근일
+
+    public void setAbsenceDays(int absenceDays) {
+        this.absenceDays = absenceDays;
+    }
+
+    public void setWorkDays(int workDays) {
+        this.workDays = workDays;
+    }
 }

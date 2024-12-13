@@ -20,7 +20,7 @@ import java.util.Map;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api")
-public class CalendarController {
+public class                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              CalendarController {
 
     private final CalendarService calendarService;
 
@@ -220,4 +220,5 @@ public class CalendarController {
         ResponseEntity<?> response = calendarService.getGroupIds(id);
         return response;
     }
+
 }

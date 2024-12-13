@@ -99,8 +99,8 @@ public class User {
     @Column(name = "outsourcing_id")
     private Long outsourcingId;
 
-    @OneToOne(fetch = FetchType.LAZY, mappedBy = "user")
-    private ProfileImg profileImg;
+    @Column(name = "profile_img_path")
+    private String profileImgPath; // 프로필 이미지의 sName (파일명)
 
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "user")
     @ToString.Exclude
@@ -113,6 +113,10 @@ public class User {
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     @ToString.Exclude
     private List<FavoriteBoard> favoriteBoards = new ArrayList<>(); // 즐겨찾기 목록
+
+    @Column(name="annual_vacation")
+    @Builder.Default
+    private Integer annualVacation = 15;
 
     public String selectLevelString(){
         return switch (level) {
@@ -191,7 +195,7 @@ public class User {
                 .id(this.id)
                 .status(this.status)
                 .uid(this.uid)
-                .pwd(this.pwd)
+                .pwd(null)
                 .role(this.role)
                 .level(this.level)
                 .grade(this.grade)
@@ -202,14 +206,15 @@ public class User {
                 .country(this.country)
                 .addr2(this.addr2)
                 .company(this.company)
+                .companyName(this.companyName)
                 .paymentId(this.paymentId)
                 .day(this.day)
-                .groupMappers(this.groupMappers)
-                .profileImg(this.profileImg != null ? this.profileImg.getSName() : "default.png") // 기본값 설정
+//                .groupMappers(this.groupMappers)
+                .profileImgPath(this.profileImgPath != null ? this.profileImgPath : "uploads/profilImg/Default.png") // 기본값 설정
                 .createAt(this.createAt)
                 .lastLogin(this.lastLogin)
                 .joinDate(this.joinDate)
-                .attendance(this.attendance)
+//                .attendance(this.attendance)
                 .build();
     }
 
@@ -219,6 +224,7 @@ public class User {
                 .uid(this.uid)
                 .grade(this.grade)
                 .role(this.role)
+                .company(this.company)
                 .id(this.id)
                 .build();
     }
@@ -285,5 +291,9 @@ public class User {
 
     public void updateLoginDate(LocalDateTime now) {
         this.lastLogin = now;
+    }
+
+    public void updateProfileImg(String profileImgPath) {
+        this.profileImgPath = profileImgPath;
     }
 }

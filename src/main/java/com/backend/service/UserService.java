@@ -1,25 +1,19 @@
 package com.backend.service;
-import com.backend.document.user.AttendanceTime;
 import com.backend.dto.chat.UsersWithGroupNameDTO;
 import com.backend.dto.request.admin.user.PatchAdminUserApprovalDto;
-import com.backend.dto.request.user.EmailDTO;
-import com.backend.dto.request.user.PaymentInfoDTO;
-import com.backend.dto.request.user.PostUserRegisterDTO;
+import com.backend.dto.request.user.*;
 import com.backend.dto.response.GetAdminUsersRespDto;
+import com.backend.dto.response.UserDto;
 import com.backend.dto.response.admin.user.GetGroupUsersDto;
 import com.backend.dto.response.user.GetUsersAllDto;
 import com.backend.dto.response.user.TermsDTO;
 import com.backend.entity.group.Group;
 import com.backend.entity.group.GroupMapper;
-import com.backend.entity.user.CardInfo;
-import com.backend.entity.user.Terms;
-import com.backend.entity.user.User;
+import com.backend.entity.user.*;
 import com.backend.repository.GroupMapperRepository;
 import com.backend.repository.GroupRepository;
 import com.backend.repository.UserRepository;
-import com.backend.repository.user.AttendanceTimeRepository;
-import com.backend.repository.user.CardInfoRepository;
-import com.backend.repository.user.TermsRepository;
+import com.backend.repository.user.*;
 import com.backend.util.Role;
 import jakarta.mail.Message;
 import jakarta.mail.internet.InternetAddress;
@@ -39,10 +33,14 @@ import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
+import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
@@ -55,6 +53,7 @@ public class UserService {
     @Value("${spring.mail.username}")
     private String sender;
 
+    private final ProfileImgRepository profileImgRepository;
     private final UserRepository userRepository;
     private final GroupRepository groupRepository;
     private final GroupMapperRepository groupMapperRepository;
@@ -62,9 +61,10 @@ public class UserService {
     private final CardInfoRepository cardInfoRepository;
     private final JavaMailSenderImpl mailSender;
     private final PasswordEncoder passwordEncoder;
-    private final AttendanceTimeRepository attendanceTimeRepository;
-    @Autowired
     private final RedisTemplate<String, String> redisTemplate;
+    private final AlertRepository alertRepository;
+    private final SftpService sftpService;
+//    private final FolderService folderService;
 
     public List<GetAdminUsersRespDto> getUserNotTeamLeader() {
         List<User> users = userRepository.findAllByRole(Role.WORKER);
@@ -164,7 +164,7 @@ public class UserService {
         return termsDTOS;
     }
 
-    public Long insertUser(PostUserRegisterDTO dto) {
+    public User insertUser(PostUserRegisterDTO dto) {
         String encodedPwd = passwordEncoder.encode(dto.getPwd());
         if(dto.getGrade() == 3 ){
             String companyCode = this.makeRandomCode(10);
@@ -196,7 +196,7 @@ public class UserService {
             log.info("유저가 없나? "+user);
             return null;
         }
-        return user.getId();
+        return user;
     }
 
     private String makeRandomCode(int length) {
@@ -342,12 +342,6 @@ public class UserService {
         return dtos;
     }
 
-    // 12.06 사용자 아이디로 소속 부서 id 추출
-    public List<Group> getGroupsByUserUid(String uid) {
-        log.info("내 아이디는 받아오나"+uid);
-        return groupMapperRepository.findGroupsByUserUid(uid);
-    }
-
     public Boolean validateCompany(String company) {
         Page<User> user = userRepository.findAllByCompany(company, Pageable.unpaged());
         if(user.isEmpty()){
@@ -357,17 +351,153 @@ public class UserService {
         }
     }
 
-    public ResponseEntity<?> goToWork(String uid, LocalDateTime start) {
-        LocalDate date = LocalDate.now();
-        LocalTime checkInTime = LocalTime.now();
-        Optional<AttendanceTime> optAttendance = attendanceTimeRepository.findByUserIdAndDate(uid, date);
-        if (optAttendance.isPresent()) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body("이미 출근 기록이 있습니다.");
+
+    public ResponseEntity<?> postAlert(PostUserAlarmDto dto, Long id) {
+        Optional<User> user = userRepository.findById(id);
+        if(user.isEmpty()){
+            return ResponseEntity.badRequest().body("로그인 정보가 일치하지않습니다...");
         }
-        AttendanceTime.builder()
-                .userId(uid)
-                .checkInTime(checkInTime)
+        LocalDateTime now = LocalDateTime.now();
+
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        String formattedNow = now.format(formatter);
+        Alert alert = Alert.builder()
+                .user(user.get())
+                .title(dto.getTitle())
+                .status(2)
+                .content(dto.getContent())
+                .createAt(formattedNow)
+                .type(1)
                 .build();
-        return null;
+
+        alertRepository.save(alert);
+
+        return ResponseEntity.ok("성공");
     }
+
+
+    public long findGroupByUserUid(String uid) {
+        Optional<GroupMapper> opt = groupMapperRepository.findGroupByUserUid(uid);
+        if(opt.isPresent()){
+            return opt.get().getGroup().getId();
+        }
+        return 0;
+    }
+
+
+
+    public UserDto getMyUser(Long userId) {
+        User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("유저 정보를 찾을 수 없습니다."));
+        Group group = user.getGroupMappers().stream()
+                .map(GroupMapper::getGroup)
+                .findFirst()
+                .orElse(null);
+        UserDto userDto= user.toDto();
+        if(group != null){
+            String department = group.getName();
+            userDto.setDepartment(department);
+        }
+        return userDto;
+    }
+
+    public Boolean uploadProfile(Long userId, MultipartFile file) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("유저 정보를 찾을 수 없습니다."));
+        log.info("프로필 업로드 유저 정보 조회 {}", user);
+
+        String remoteDir = "uploads/profilImg";
+        String originalFilename = file.getOriginalFilename();
+        String savedFilename = generateSavedName(originalFilename);
+        String path = remoteDir + "/" + savedFilename;
+        log.info("경로 확인 {}", path);
+
+        // 기존 프로필 이미지 삭제 경로 확인
+        String deletePath = user.getProfileImgPath() != null
+                ? remoteDir + "/" + user.getProfileImgPath()
+                : null;
+
+        // 임시 파일 생성 및 SFTP 업로드
+        File tempFile = null;
+        try {
+            tempFile = File.createTempFile("upload_", "_" + originalFilename);
+            file.transferTo(tempFile);
+            log.info("임시 파일 생성: {}", tempFile.getAbsolutePath());
+
+            // SFTP 업로드
+            sftpService.uploadFile(tempFile.getAbsolutePath(), remoteDir, savedFilename);
+
+            // 기존 프로필 이미지 삭제
+            if (deletePath != null) {
+                sftpService.delete(deletePath);
+                log.info("기존 프로필 이미지 삭제 완료: {}", deletePath);
+                profileImgRepository.deleteByUserId(user.getId());
+            }
+
+            // 새 프로필 이미지 정보 저장
+            ProfileImg profileImg = ProfileImg.builder()
+                    .userId(userId)
+                    .path(path)
+                    .status(1)
+                    .rName(originalFilename)
+                    .sName(savedFilename)
+                    .message(null)
+                    .build();
+            profileImgRepository.save(profileImg);
+
+            // 유저 엔티티에 프로필 이미지 경로 업데이트
+            user.updateProfileImg(savedFilename);
+            userRepository.save(user);
+
+            log.info("프로필 업로드 및 저장 완료: {}", profileImg);
+            return true;
+        } catch (Exception e) {
+            log.error("프로필 업로드 중 오류 발생: {}", e.getMessage(), e);
+            throw new RuntimeException("프로필 업로드에 실패했습니다.", e);
+        } finally {
+            if (tempFile != null && tempFile.exists() && tempFile.delete()) {
+                log.info("임시 파일 삭제 성공: {}", tempFile.getAbsolutePath());
+            }
+        }
+    }
+
+
+    public String generateSavedName(String originalName) {
+        // Validate input
+        if (originalName == null || originalName.isEmpty()) {
+            throw new IllegalArgumentException("Original file name cannot be null or empty");
+        }
+
+        // Extract file extension
+        String extension = "";
+        int dotIndex = originalName.lastIndexOf(".");
+        if (dotIndex > 0 && dotIndex < originalName.length() - 1) {
+            extension = originalName.substring(dotIndex);
+        }
+
+        // Generate UUID and append extension
+        String uuid = UUID.randomUUID().toString();
+        return uuid + extension;
+    }
+
+    public UserDto getSliceUser(Long userId) {
+        User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("유저 정보를 찾을 수 없습니다."));
+        Group group = user.getGroupMappers().stream()
+                .map(GroupMapper::getGroup)
+                .findFirst()
+                .orElse(null);
+        UserDto userDto= user.toSliceDto();
+        userDto.setName(user.getName());
+        userDto.setEmail(user.getEmail());
+        userDto.setProfileImgPath("나중에 url");
+        if(group != null){
+            String department = group.getName();
+            long groupId = group.getId();
+            userDto.setDepartment(department);
+            userDto.setGroupId(groupId);
+
+        }
+        return userDto;
+    }
+
+
 }

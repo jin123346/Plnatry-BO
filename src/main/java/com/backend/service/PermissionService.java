@@ -4,13 +4,17 @@ package com.backend.service;
 import com.backend.document.drive.DrivePermission;
 import com.backend.document.page.PagePermission;
 import com.backend.entity.folder.Permission;
+import com.backend.entity.user.User;
 import com.backend.repository.PermissionRepository;
+import com.backend.repository.UserRepository;
 import com.backend.repository.drive.DrivePermissionRepository;
+import com.backend.repository.drive.PermissionMySQLRepository;
 import com.backend.util.PermissionType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -36,6 +40,9 @@ public class PermissionService {
 
     private final PermissionRepository permissionRepository;
     private final DrivePermissionRepository drivePermissionRepository;
+    private final UserService userService;
+    private final UserRepository userRepository;
+    private final PermissionMySQLRepository permissionMySQLRepository;
 
 
     // 권한 확인
@@ -50,7 +57,6 @@ public class PermissionService {
         if (permissions == 0){
             throw new IllegalArgumentException("PermissionTypes cannot be null or empty");
         }
-
         if (type.equals("page")) {
             PagePermission pagePermission = permissionRepository.findByPageIdAndUserId(id, userId)
                     .orElse(PagePermission.builder()
@@ -80,7 +86,24 @@ public class PermissionService {
     }
 
 
-    // 권한 제거
+
+    //mysql 권한 저장
+    public Permission savePermission(String id,User user, String type, String permissionType) {
+        Permission permission = Permission.builder()
+                .type(type)
+                .permissions(permissionType)
+                .user(user)
+                .typeId(id)
+                .updatedAt(LocalDateTime.now())
+                .build();
+        Permission savedPermission = permissionMySQLRepository.save(permission);
+
+        return savedPermission;
+    }
+
+
+
+        // 권한 제거
     public void removePermission(String id, PermissionType permissionType,String type) {
 
         if(type.equals("page")){

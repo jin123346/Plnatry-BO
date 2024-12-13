@@ -55,7 +55,12 @@ public class FolderService {
 
         if(request.getParentFolder() != null){
             FolderDto folderDto = request.getParentFolder();
-           makeDrive = sftpService.createNewFolder(request.getName(), folderDto.getPath());
+            Folder exisitingFolder = folderMogoRepository.findFolderByNameAndParentIdAndStatusIsNot(request.getName(),folderDto.getId(),0);
+            if(exisitingFolder != null){
+                log.info("이미 존재하는 폴더 :{}",exisitingFolder.getName());
+                return exisitingFolder.getId();
+            }
+            makeDrive = sftpService.createNewFolder(request.getName(), folderDto.getPath());
 
         }else{
             makeDrive = sftpService.createFolder(request.getName(),uid);
@@ -75,6 +80,7 @@ public class FolderService {
                    .ownerId(uid)
                    .description(request.getDescription())
                    .status(1)
+                   .sharedUser("[]")
                    .isShared(request.getIsShared())
                    .linkSharing(request.getLinkSharing())
                    .updatedAt(LocalDateTime.now())
@@ -139,6 +145,8 @@ public class FolderService {
                         .createdAt(folder.getCreatedAt())
                         .isShared(folder.getIsShared())
                         .isPinned(folder.getIsPinned())
+                        .sharedDept(folder.getSharedDept())
+                        .sharedUser(folder.getSharedUser())
                         .status(folder.getStatus())
                         .linkSharing(folder.getLinkSharing())
                         .updatedAt(folder.getUpdatedAt())
@@ -156,7 +164,9 @@ public class FolderService {
     public Folder getFolderName(String uid){
         return folderMogoRepository.findByName(uid);
     }
-
+    public Folder existFolder(String name,String parentId){
+        return folderMogoRepository.findFolderByNameAndParentIdAndStatusIsNot(name,parentId,0);
+    }
 
     public List<FolderDto> getSubFolders(String ownerId, String folderId){
         List<Folder> folders =folderMogoRepository.findByOwnerIdAndParentIdAndStatusIsNotOrderByOrder(ownerId,folderId,0);
@@ -211,9 +221,9 @@ public class FolderService {
     }
 
 
-
-    public void uploadFiles(List<MultipartFile> files , String folderId,double maxOrder,String uid){
-
+    @Transactional
+    public boolean uploadFiles(List<MultipartFile> files , String folderId,double maxOrder,String uid){
+         boolean result = false;
          Optional<Folder> opt = folderMogoRepository.findById(folderId);
 
          String remoteDir = null;
@@ -226,6 +236,7 @@ public class FolderService {
              isShared = folder.getIsShared();
              isPinned = folder.getIsPinned();
          }
+         int size =0 ;
         for(MultipartFile file : files){
 
             String originalFilename = file.getOriginalFilename();
@@ -277,11 +288,29 @@ public class FolderService {
             }
            FileMogo savedFile =  fileMogoRepository.save(saved);
 
+            size ++;
 
+        }
+
+        if(size == files.size()){
+            return true;
+        }else{
+            return false;
         }
 
 
 
+    }
+
+    // 파일 저장 로직
+    public boolean saveFileToFolder(MultipartFile file, String folderId, double fileOrder, String uid) {
+        try {
+            List<MultipartFile> files = Collections.singletonList(file);
+            return uploadFiles(files, folderId, fileOrder, uid);
+        } catch (Exception e) {
+            log.error("파일 저장 중 오류 발생: {}", e.getMessage(), e);
+            return false; // 실패 시 false 반환
+        }
     }
 
 

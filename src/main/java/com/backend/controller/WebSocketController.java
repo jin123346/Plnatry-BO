@@ -12,6 +12,7 @@ import com.backend.dto.request.calendar.PutContentMessageDto;
 import com.backend.dto.response.calendar.GetCalendarNameDto;
 import com.backend.dto.response.calendar.GetCalendarsDto;
 import com.backend.dto.response.calendar.GetMessagePostCalendarDto;
+import com.backend.dto.response.page.MessagePageDto;
 import com.backend.entity.calendar.Calendar;
 import com.backend.entity.calendar.CalendarContent;
 import com.backend.entity.calendar.CalendarMapper;
@@ -68,9 +69,7 @@ public class WebSocketController {
     @MessageMapping("/calendar/delete")
     @Transactional
     public void deleteCalendar(String calendarId) {
-        List<CalendarContent> contents = calendarContentRepository.findAllByCalendar_CalendarIdAndCalendar_StatusIsNot(Long.parseLong(calendarId),0);
         Map<String, Object> map = new HashMap<>();
-        List<GetCalendarsDto> dtos = contents.stream().map(CalendarContent::toGetCalendarsDto).toList();
         map.put("delete", calendarId);
 
         messagingTemplate.convertAndSend("/topic/calendar/"+calendarId, map);
@@ -170,7 +169,25 @@ public class WebSocketController {
         System.out.println(userId + " has unsubscribed from calendar " + calendarId);
     }
 
+    @MessageMapping("/page/update")
+    public void updatePageContent(@Payload String message) throws JsonProcessingException {
+        System.out.println(message);
+        ObjectMapper objectMapper = new ObjectMapper();
+        MessagePageDto messageMap = objectMapper.readValue(message, MessagePageDto.class);
+        System.out.println(messageMap.getSelectId());
+        System.out.println(messageMap.getSendData());
+        System.out.println(messageMap.getUserId());
+        System.out.println("sadkfljasdkfjllsaf");
 
+        messagingTemplate.convertAndSend("/topic/page/"+messageMap.getSelectId(), messageMap);
+    }
 
+    @MessageMapping("/page/title")
+    public void updatePageTitle(@Payload String message) throws JsonProcessingException {
+        ObjectMapper objectMapper = new ObjectMapper();
+        MessagePageDto messageMap = objectMapper.readValue(message, MessagePageDto.class);
+        messagingTemplate.convertAndSend("/topic/page/"+messageMap.getSelectId(), messageMap);
+        System.out.println("sadkfljasdkfjllsaf2");
+    }
 
 }

@@ -4,12 +4,16 @@ import com.backend.dto.response.GetAdminSidebarGroupsRespDto;
 import com.backend.dto.response.admin.group.GetGroupDto;
 import com.backend.dto.response.group.GetGroupsAllDto;
 import com.backend.dto.response.user.GetUsersAllDto;
+import com.fasterxml.jackson.annotation.JsonIdentityInfo;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.util.ArrayList;
 import java.util.List;
 
+@JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
 @Entity
 @AllArgsConstructor
 @NoArgsConstructor
@@ -26,8 +30,9 @@ public class Group {
     @Column(name = "group_name")
     private String name;  // 그룹 이름
 
-    @OneToMany(mappedBy = "group")
+    @OneToMany(mappedBy = "group", fetch = FetchType.LAZY)
     @ToString.Exclude
+    @JsonIgnore
     private List<GroupMapper> groupMappers;
 
     @Column(name = "group_status")
