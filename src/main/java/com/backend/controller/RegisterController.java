@@ -8,6 +8,7 @@ import com.backend.entity.user.CardInfo;
 import com.backend.entity.user.User;
 import com.backend.service.ChatService;
 import com.backend.service.GroupService;
+import com.backend.service.AttendanceService;
 import com.backend.service.UserService;
 import com.backend.util.Role;
 import jakarta.transaction.Transactional;
@@ -30,6 +31,7 @@ public class RegisterController {
     private final UserService userService;
     private final ChatService chatService;
     private final GroupService groupService;
+    private final AttendanceService attendanceService;
 
     @GetMapping("/terms")
     public ResponseEntity<?> termsList(){
@@ -117,14 +119,13 @@ public class RegisterController {
                 dto.setPaymentId(cardInfo.getCardId());
             }
 
-            Long userId = userService.insertUser(dto);
-            if (userId == null) {
+            User insertUser = userService.insertUser(dto);
+            if (insertUser == null) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Not Create");
             }
 
-            if (cardInfo != null) {
-                cardInfo.updateUserid(userId);
-            }
+            cardInfo.updateUserid(insertUser.getId());
+            attendanceService.insertAttendance(insertUser);
 
             // 12.12 전규찬 채팅용 유저 등록 기능 추가
             User user = userService.getUserByuid(dto.getUid());

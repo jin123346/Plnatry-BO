@@ -35,18 +35,21 @@ public class UserDto {
     private String country;
     private String addr2;
     private String company;
+    private String companyName;
     private Long paymentId; // 결제정보
     private String day;
-    private String refreshToken;
     @ToString.Exclude
     private List<GroupMapper> groupMappers;
     private LocalDateTime createAt;
     private LocalDateTime lastLogin;
     private LocalDate joinDate;
     private String profileImg;
+    private String department;
     @ToString.Exclude
     private List<Attendance> attendance;
 
+    //추가필드
     private Long groupId;
+    private String permission;
 
 }

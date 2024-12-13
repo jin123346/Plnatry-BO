@@ -3,10 +3,13 @@ package com.backend.service;
 import com.backend.document.user.AttendanceTime;
 import com.backend.dto.request.user.ReqAttendanceDTO;
 import com.backend.dto.request.user.RequestVacationDTO;
+import com.backend.dto.response.user.RespMonthAttendanceDTO;
 import com.backend.dto.response.user.ResponseAttendanceDTO;
+import com.backend.entity.user.Attendance;
 import com.backend.entity.user.User;
 import com.backend.entity.user.Vacation;
 import com.backend.repository.UserRepository;
+import com.backend.repository.user.AttendanceRepository;
 import com.backend.repository.user.AttendanceTimeRepository;
 import com.backend.repository.user.VacationRepository;
 import jakarta.annotation.PostConstruct;
@@ -22,6 +25,7 @@ import java.text.SimpleDateFormat;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /*
     날짜: 2024/12/10
@@ -38,6 +42,7 @@ public class AttendanceService {
     private final AttendanceTimeRepository attendanceTimeRepository;
     private final UserRepository userRepository;
     private final VacationRepository vacationRepository;
+    private final AttendanceRepository attendanceRepository;
 
     @PostConstruct
     public void init() {
@@ -112,15 +117,26 @@ public class AttendanceService {
             }else{
                 attendance.setCheckOutTime(time, attendance.getStatus());
                 attendanceTimeRepository.save(attendance); // 변경 사항 저장
+                updateWorkDays(userId);
+
                 DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss");
                 String formattedTime = attendance.getCheckInTime().format(formatter);
-
                 return ResponseEntity.ok().body(formattedTime);
             }
         }else{
             return ResponseEntity.status(HttpStatus.CONFLICT).body("이미 퇴근이 완료되었습니다.");
         }
+    }
 
+    public void updateWorkDays(Long userId){
+        String yearMonth = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM"));
+        // 월간 근태 조회
+        Attendance monthlyAttendance = attendanceRepository
+                .findByUser_IdAndYearMonth(userId, yearMonth)
+                .orElseThrow(() -> new RuntimeException("해당 월의 근태 기록을 찾을 수 없습니다."));
+
+        monthlyAttendance.setWorkDays(monthlyAttendance.getWorkDays()+ 1);
+        attendanceRepository.save(monthlyAttendance);
     }
 
     public void markAttendance( String type) {
@@ -161,6 +177,8 @@ public class AttendanceService {
     private void handleAbsent(String date, List<Long> recordedUserIds, List<User> allUsers) {
         log.info("전체 유저 데이터 "+allUsers.toString());
         LocalDate today = LocalDate.now();
+        String yearMonth = today.format(DateTimeFormatter.ofPattern("yyyy-MM"));
+
         allUsers.stream()
                 .filter(user -> !recordedUserIds.contains(user.getId())) // 오늘 기록이 없는 사용자
                 .filter(user -> !isOnLeave(user.getId(), today)) // 연차가 아닌 사용자만 필터링
@@ -175,6 +193,11 @@ public class AttendanceService {
                             .build();
                     AttendanceTime test = attendanceTimeRepository.save(absentAttendance);
                     log.info("결근 처리 됐나? "+test.toString());
+                    Attendance monthlyAttendance = attendanceRepository
+                            .findByUser_IdAndYearMonth(user.getId(), yearMonth)
+                            .orElseThrow(() -> new RuntimeException("해당 월의 근태 기록을 찾을 수 없습니다."));
+                    monthlyAttendance.setAbsenceDays(monthlyAttendance.getAbsenceDays() + 1);
+                    attendanceRepository.save(monthlyAttendance);
                 });
     }
 
@@ -317,5 +340,76 @@ public class AttendanceService {
                 });
         log.info("근태 검색 디티오 "+dtos.toString());
         return ResponseEntity.ok().body(dtos);
+    }
+
+    public void insertAttendance(User user){
+        String month = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM"));
+        Attendance att = Attendance.builder()
+                                .status(0)
+                                .user(user)
+                                .yearMonth(month)
+                                .workDays(0)
+                                .absenceDays(0)
+                                .vacationDays(0)
+                                .overtimeHours(0)
+                                .build();
+        Attendance resultAtt = attendanceRepository.save(att);
+        if(resultAtt == null) {
+            log.error("Attendance 저장 실패");
+            throw new RuntimeException("Attendance 저장에 실패했습니다.");
+        }
+    }
+
+    public void insertAllAttendance() {
+        String month = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM"));
+        List<User> allUsers = userRepository.findAll();
+        if(allUsers.isEmpty()) {
+            throw new NullPointerException("유저 정보 조회 실패.");
+        }
+        try {
+            List<Attendance> attendances = allUsers.stream()
+                    .map(user -> Attendance.builder()
+                            .status(0)
+                            .user(user)
+                            .yearMonth(month)
+                            .workDays(0)
+                            .absenceDays(0)
+                            .vacationDays(0)
+                            .overtimeHours(0)
+                            .build())
+                    .collect(Collectors.toList());
+
+            attendanceRepository.saveAll(attendances);
+        } catch (Exception e) {
+            log.error("Bulk Attendance 저장 실패", e);
+            throw new RuntimeException("Attendance 일괄 저장 중 오류 발생", e);
+        }
+    }
+
+
+    public ResponseEntity<?> getAttendance(Long uid) {
+        String yearMonth = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM"));
+        log.info("여기 1"+yearMonth);
+
+        User user = userRepository.findById(uid)
+                .orElseThrow(() -> new RuntimeException("유저 정보를 찾을 수 없습니다."));
+
+        Optional<Attendance> att = attendanceRepository.findByUserAndYearMonth(user, yearMonth);
+        if(att.isPresent()) {
+            log.info("여기 2 "+att.get().toString());
+            RespMonthAttendanceDTO respAtt = RespMonthAttendanceDTO.builder()
+                                                        .yearMonth(att.get().getYearMonth())
+                                                        .attendanceId(att.get().getAttendanceId())
+                                                        .workDays(att.get().getWorkDays())
+                                                        .overtimeHours(att.get().getOvertimeHours())
+                                                        .vacationDays(att.get().getVacationDays())
+                                                        .absenceDays(att.get().getAbsenceDays())
+                                                        .annualVacation(user.getAnnualVacation()!=null?user.getAnnualVacation():0)
+                                                        .build();
+            log.info("여기 3 "+respAtt.toString());
+            return ResponseEntity.ok().body(respAtt);
+        }else{
+            throw new NullPointerException("근태 기록을 찾을 수 없습니다.");
+        }
     }
 }

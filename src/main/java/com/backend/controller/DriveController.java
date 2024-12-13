@@ -7,6 +7,7 @@ import com.backend.dto.request.drive.DeletedRequest;
 import com.backend.dto.request.drive.MoveFolderRequest;
 import com.backend.dto.request.drive.NewDriveRequest;
 import com.backend.dto.request.drive.RenameRequest;
+import com.backend.dto.response.UserDto;
 import com.backend.dto.response.drive.FolderDto;
 import com.backend.document.drive.Folder;
 import com.backend.dto.response.drive.FolderResponseDto;
@@ -27,10 +28,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @RestController
 @Log4j2
@@ -153,6 +151,31 @@ public class DriveController {
         Map<String,Object> response = new HashMap<>();
 
         FolderDto parentFolder = folderService.getParentFolder(folderId);
+        ObjectMapper objectMapper = new ObjectMapper(); // JSON 파싱용 ObjectMapper
+        Map<String, Map<String, String>> sharedUserMap = new HashMap<>();
+        try {
+            if (parentFolder.getSharedUser() != null) {
+                sharedUserMap = objectMapper.readValue(parentFolder.getSharedUser(),
+                        new TypeReference<Map<String, Map<String, String>>>() {});
+            }
+        } catch (JsonProcessingException e) {
+            log.error("Failed to parse sharedUser JSON", e);
+        }
+        List<UserDto> sharedUsersWithDetails = new ArrayList<>();
+        for (String key : sharedUserMap.keySet()) {
+            String userId = sharedUserMap.get(key).get("id");
+            String permission = sharedUserMap.get(key).get("permission");
+
+            // User 정보를 조회 (DB 또는 서비스 호출)
+            UserDto user = userService.getSliceUser(Long.parseLong(userId)); // userService를 통해 조회
+
+            if (user != null) {
+                user.setPermission(permission);
+                sharedUsersWithDetails.add(user);
+            }
+        }
+
+
         //폴더 가져오기
         String uid = (String) request.getAttribute("uid");
         List<FolderDto> subFolders = folderService.getSubFolders(uid,folderId);
@@ -160,7 +183,7 @@ public class DriveController {
         //파일 가져오기
         List<FileRequestDto> files = folderService.getFiles(folderId);
 
-
+        response.put("sharedUser",sharedUsersWithDetails);
         response.put("files",files);
         response.put("parentFolder",parentFolder);
         response.put("subFolders", subFolders);

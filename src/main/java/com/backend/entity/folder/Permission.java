@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 @ToString
 @Getter
 @Builder
-@Table(name = "permission")
+@Table(name = "drive_permission")
 public class Permission {
 
     @Id
@@ -24,21 +24,18 @@ public class Permission {
     @JoinColumn(name = "user_id", nullable = false)
     private User user; // 권한을 가진 사용자
 
-    @ManyToOne
-    @JoinColumn(name = "file_id")
-    private File file; // 권한이 적용된 파일 (NULL이면 폴더에 적용)
-
     @Column(nullable = true)
-    private String folderId; // MongoDB의 폴더 ID (folder._id)
+    private String typeId; // folderId  or FileId
 
-    @Column(nullable = true)
-    private String fileId; // MongoDB의 파일 ID (파일에 대한 권한인 경우)
-
+    @Column(nullable = false)
+    private String type; // type  file/folder
 
     // 권한을 비트마스크로 저장
     @Column(nullable = false)
-    private int permissions;
+    private String permissions;
 
     @CreationTimestamp
     private LocalDateTime createdAt; // 권한 생성 날짜 및 시간
+
+    private LocalDateTime updatedAt;
 }

@@ -33,4 +33,9 @@ public interface GroupMapperRepository extends JpaRepository<GroupMapper, Long> 
     List<GroupMapper> findAllByGroupOrderByUser_LevelDesc(Group group);
 
     Optional<GroupMapper> findGroupByUserUid(String uid);
+
+     Long countGroupMapperByGroup_Id(Long groupId);
+
+     List<GroupMapper> findGroupMapperByGroup_Id(Long groupId);
+
 }
