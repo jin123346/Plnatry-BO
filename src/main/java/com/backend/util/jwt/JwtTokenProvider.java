@@ -8,6 +8,8 @@ import org.springframework.stereotype.Component;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 @Log4j2
 @Component
@@ -33,22 +35,27 @@ public class JwtTokenProvider {
                     .setExpiration(expireDate)
                     .claim("id", id)
                     .claim("role", role)
+                    .claim("name",username )
+                    .claim("aud", "remark42")
                     .signWith(SignatureAlgorithm.HS256, getSigningKey())
                     .compact();
         }else{
             expireDate = new Date(now.getTime() + Duration.ofDays(7).toMillis());
             return Jwts.builder()
+                    .setIssuer(issuer)
                     .setSubject(username)
                     .setIssuedAt(now)
                     .setExpiration(expireDate)
                     .claim("id", id)
                     .claim("role", role)
+                    .claim("name",username )
+                    .claim("aud", "remark42")
                     .signWith(SignatureAlgorithm.HS256, getSigningKey())
                     .compact();
         }
     }
 
-    private byte[] getSigningKey() {
+    public byte[] getSigningKey() {
         try {
             return secret.getBytes(StandardCharsets.UTF_8);
         } catch (Exception e) {
@@ -117,4 +124,26 @@ public class JwtTokenProvider {
         }
         return false;
     }
+
+    public String createRemark42Token(String username, Long id) {
+        Date now = new Date();  // 현재 시간
+        long expireTime = now.getTime() + 3600 * 1000;  // 1시간 후 만료
+
+        Map<String, Object> remark42Claims = new HashMap<>();
+        remark42Claims.put("sub", username);
+        remark42Claims.put("name", username);
+        remark42Claims.put("id", id.toString());
+        remark42Claims.put("iat", now.getTime() / 1000);
+        remark42Claims.put("exp", expireTime / 1000);
+        remark42Claims.put("aud", "remark42");
+        remark42Claims.put("iss", "remark42");
+
+        return Jwts.builder()
+                .setHeaderParam("typ", "JWT")
+                .setClaims(remark42Claims)
+                .signWith(SignatureAlgorithm.HS256, getSigningKey())
+                .compact();
+    }
+
+
 }

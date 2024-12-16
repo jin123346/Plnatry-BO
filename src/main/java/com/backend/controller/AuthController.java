@@ -7,6 +7,8 @@ import com.backend.repository.UserRepository;
 import com.backend.service.UserService;
 import com.backend.util.jwt.JwtTokenProvider;
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.transaction.Transactional;
@@ -68,6 +70,14 @@ public class AuthController {
             cookie.setMaxAge(60*60*24*7);
             resp.addCookie(cookie);
 
+            //쿠키에 저장해라
+            Cookie acookie = new Cookie("jwt_token", accessToken);
+            acookie.setPath("/");
+            acookie.setMaxAge(60*60*24*7);
+            acookie.setSecure(false);
+            acookie.setAttribute("SameSite", "Lax");  // HTTP에서는 'Lax'를 사용
+            acookie.setHttpOnly(false);       // JavaScript에서 접근할 수 있게 설정
+            resp.addCookie(acookie);
 
             long groupId = userService.findGroupByUserUid(userDto.getUid());
             UserDto userDto1 = user.get().toSliceDto();
@@ -77,6 +87,8 @@ public class AuthController {
 
             Map<String, Object> response = new HashMap<>();
             response.put("token",accessToken);
+//            response.put("access_token", accessToken); // Access 토큰
+            response.put("refresh_token", refreshToken); // Refresh 토큰
             response.put("role",user.get().getRole());
             response.put("user",userDto1);
 
@@ -143,4 +155,6 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid refresh token");
         }
     }
+
+
 }
