@@ -1,6 +1,7 @@
 package com.backend.entity.user;
 
 import com.backend.dto.request.admin.user.PatchAdminUserApprovalDto;
+import com.backend.dto.request.user.PostUserRegisterDTO;
 import com.backend.dto.response.GetAdminUsersApprovalRespDto;
 import com.backend.dto.response.GetAdminUsersDtailRespDto;
 import com.backend.dto.response.GetAdminUsersRespDto;
@@ -14,6 +15,7 @@ import com.backend.util.Role;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -60,6 +62,12 @@ public class User {
 
     @Column(name = "name")
     private String name;
+
+//    @Column(name = "first_name")
+//    private String firstName;
+//
+//    @Column(name = "last_name")
+//    private String lastName;
 
     @Column(name = "city")
     private String addr1;
@@ -117,6 +125,18 @@ public class User {
     @Column(name="annual_vacation")
     @Builder.Default
     private Integer annualVacation = 15;
+
+    @Column(name = "profile_message")
+    private String profileMessage;
+
+    public void updateUser(PostUserRegisterDTO dto) {
+        this.email = dto.getEmail();
+        this.hp = dto.getHp();
+        this.name = dto.getName();
+        this.addr1 = dto.getAddr1();
+        this.country = dto.getCountry();
+        this.addr2 = dto.getAddr2();
+    }
 
     public String selectLevelString(){
         return switch (level) {
@@ -211,6 +231,7 @@ public class User {
                 .day(this.day)
 //                .groupMappers(this.groupMappers)
                 .profileImgPath(this.profileImgPath != null ? this.profileImgPath : "uploads/profilImg/Default.png") // 기본값 설정
+                .profileMessage(this.profileMessage)
                 .createAt(this.createAt)
                 .lastLogin(this.lastLogin)
                 .joinDate(this.joinDate)
@@ -295,5 +316,11 @@ public class User {
 
     public void updateProfileImg(String profileImgPath) {
         this.profileImgPath = profileImgPath;
+    }
+
+    public void updateMessage(String message) { this.profileMessage = message; }
+
+    public void updatePass(String pwd) {
+        this.pwd = pwd;
     }
 }

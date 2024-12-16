@@ -1,6 +1,7 @@
 package com.backend.config;
 
 import com.backend.dto.request.AuthenticateDto;
+import com.backend.util.MyOauth2UserService;
 import com.backend.util.jwt.JwtTokenProvider;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
@@ -40,6 +41,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SecurityConfig implements WebMvcConfigurer {
     private final JwtTokenProvider jwtTokenProvider;
+    private final MyOauth2UserService myOauth2UserService;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -62,13 +64,17 @@ public class SecurityConfig implements WebMvcConfigurer {
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().permitAll()
                 )
+//                .oauth2Login(login -> {
+//                    login.userInfoEndpoint(endpoint -> endpoint.userService(myOauth2UserService))
+//                            .defaultSuccessUrl("/api/auth/social");
+//                })
                 .build();
     }
 
     @Bean
     protected CorsConfigurationSource corsConfigurationSource(){
         CorsConfiguration corsConfiguration = new CorsConfiguration();
-        corsConfiguration.setAllowedOrigins(List.of("http://localhost:8010", "http://13.124.94.213:90"));
+        corsConfiguration.setAllowedOriginPatterns(List.of("http://localhost:8010", "http://127.0.0.1:8010/", "http://13.124.94.213:90"));
         corsConfiguration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         corsConfiguration.addAllowedHeader("Authorization");
         corsConfiguration.addAllowedHeader("Content-Type");

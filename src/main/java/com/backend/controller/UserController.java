@@ -2,8 +2,10 @@ package com.backend.controller;
 
 import com.backend.document.drive.Folder;
 import com.backend.dto.chat.UsersWithGroupNameDTO;
+import com.backend.dto.request.LoginDto;
 import com.backend.dto.request.admin.user.PatchAdminUserApprovalDto;
 import com.backend.dto.request.drive.NewDriveRequest;
+import com.backend.dto.request.user.PostUserRegisterDTO;
 import com.backend.dto.response.GetAdminUsersRespDto;
 import com.backend.dto.response.UserDto;
 import com.backend.dto.response.drive.FolderDto;
@@ -131,13 +133,12 @@ public class UserController {
         }
     }
 
+
     @PostMapping("/my/profile")
     public ResponseEntity<?> uploadProfile(Authentication auth,
                                            @RequestParam("file") MultipartFile file
     ){
-        log.info("프로필 업로드 컨트롤러 "+file);
         log.info("프로필 업로드 컨트롤러 "+file.getOriginalFilename());
-        log.info("프로필 업로드 컨트롤러 "+file.getName());
         Long userId = Long.valueOf(auth.getName());
         try {
             Boolean result = userService.uploadProfile(userId, file);
@@ -145,5 +146,36 @@ public class UserController {
         }catch (Exception e){
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
+    }
+
+    @PostMapping("/my/message")
+    public ResponseEntity<?> updateMessage(Authentication auth,
+                                           @RequestBody String message ){
+        log.info("프로필 메세지 컨트롤러 "+ message);
+        Long userId = Long.valueOf(auth.getName());
+        return userService.updateMessage(userId,message);
+    }
+
+    @PostMapping("/my/modify")
+    public ResponseEntity<?> modifyUser(Authentication auth,
+                                        @RequestBody PostUserRegisterDTO dto){
+        log.info("회원 수정 컨트롤러 "+dto);
+        Long userId = Long.valueOf(auth.getName());
+        return userService.updateUser(userId, dto);
+    }
+
+    @PostMapping("/my/confirmPass")
+    public ResponseEntity<?> confirmPass(Authentication auth,
+                                         @RequestBody LoginDto pwd){
+        log.info("비밀번호 확인 컨트롤러 "+pwd.getPwd());
+        Long userId = Long.valueOf(auth.getName());
+        return userService.confirmPass(userId, pwd.getPwd());
+    }
+    @PostMapping("/my/updatePass")
+    public ResponseEntity<?> updatePass (Authentication auth,
+                                         @RequestBody LoginDto dto){
+        log.info("비밀번호 변경 컨트롤러 "+dto);
+        Long userId = Long.valueOf(auth.getName());
+        return userService.updatePass(userId, dto.getPwd());
     }
 }

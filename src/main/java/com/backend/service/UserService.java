@@ -18,6 +18,7 @@ import com.backend.util.Role;
 import jakarta.mail.Message;
 import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
+import jakarta.servlet.http.Cookie;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -392,7 +393,9 @@ public class UserService {
                 .map(GroupMapper::getGroup)
                 .findFirst()
                 .orElse(null);
+        String userlevel = user.selectLevelString();
         UserDto userDto= user.toDto();
+        userDto.setLevelString(userlevel);
         if(group != null){
             String department = group.getName();
             userDto.setDepartment(department);
@@ -500,4 +503,53 @@ public class UserService {
     }
 
 
+    public ResponseEntity<?> updateMessage(Long userId, String message) {
+        Optional<User> optUser = userRepository.findById(userId);
+        if(optUser.isPresent()){
+            User user = optUser.get();
+            user.updateMessage(message);
+            userRepository.save(user);
+            return ResponseEntity.ok().build();
+        }else{
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("유저 정보를 찾을 수 없습니다. 다시 시도해 주세요.");
+        }
+    }
+
+    public ResponseEntity<?> updateUser(Long userId, PostUserRegisterDTO dto) {
+        Optional<User> optUser = userRepository.findById(userId);
+        if(optUser.isPresent()){
+            User user = optUser.get();
+            user.updateUser(dto);
+            userRepository.save(user);
+            return ResponseEntity.ok().build();
+        }else{
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("유저 정보를 찾을 수 없습니다.");
+        }
+    }
+
+    public ResponseEntity<?> confirmPass(Long userId, String pwd) {
+        Optional<User> optUser = userRepository.findById(userId);
+        if(optUser.isEmpty()){
+            return ResponseEntity.notFound().build();
+        }
+        if(passwordEncoder.matches(pwd, optUser.get().getPwd())){
+            return ResponseEntity.ok().build();
+        }else{
+            return ResponseEntity.status(HttpStatus.CONFLICT).body("비밀번호 안 맞음");
+        }
+    }
+
+    public ResponseEntity<?> updatePass(Long userId, String pwd) {
+        Optional<User> optUser = userRepository.findById(userId);
+        if(optUser.isEmpty()){
+            return ResponseEntity.notFound().build();
+        }else{
+            User user = optUser.get();
+            String encodedPwd = passwordEncoder.encode(pwd);
+            log.info("인코딩 패스워드 "+encodedPwd);
+            user.updatePass(encodedPwd);
+            userRepository.save(user);
+            return ResponseEntity.ok().build();
+        }
+    }
 }
