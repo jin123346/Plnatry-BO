@@ -1,28 +1,22 @@
 package com.backend.entity.community;
 
-/*
-    날짜 : 2024/12/03
-    이름 : 박서홍
-    내용 : Comment Entity 작성
- */
-
 import com.backend.entity.user.User;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-@Builder
-@AllArgsConstructor
-@NoArgsConstructor
-@ToString
-@Getter
 @Entity
-public class Comment extends BaseTimeEntity{
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class Comment extends BaseTimeEntity {
 
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "comment_id")
     private Long commentId;
 
@@ -31,18 +25,72 @@ public class Comment extends BaseTimeEntity{
     private Post post;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "parent_id") // 부모 댓글 ID
+    @JoinColumn(name = "parent_id")
     private Comment parent; // 부모 댓글 (대댓글 기능용)
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Comment> children = new ArrayList<>(); // 자식 댓글 (대댓글 리스트)
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
+
+
+    @Column(nullable = false, length = 1000)
     private String content;
 
-    private String writer;
+    @Column(nullable = false)
+    private Long likes = 0L;
 
-    @ManyToOne(fetch = FetchType.LAZY) // 작성자는 하나의 사용자
-    @JoinColumn(name = "user_id", nullable = false) // 외래 키
-    private User user; // 작성자 정보
+    @Column(nullable = false)
+    private Boolean isDeleted = false;
 
+
+
+    @Column(nullable = false)
+    private int depth = 0; // 댓글 깊이 (0: 일반 댓글, 1 이상: 대댓글)
+
+    @Column(nullable = false)
+    private Long orderNumber; // 댓글 순서
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "mention_user_id")
+    private User mentionUser;
+
+    // 댓글 생성자
+    public Comment(Post post, Comment parent, User user, String content) {
+        this.post = post;
+        this.parent = parent;
+        this.user = user;
+        this.content = content;
+        this.likes = 0L;
+        this.isDeleted = false;
+
+        if (parent == null) {
+            // 부모 댓글이 없는 경우 (일반 댓글)
+            this.depth = 0;
+            this.orderNumber = (long) post.getCommentCount()+ 1;
+        } else {
+            // 부모 댓글이 있는 경우 (대댓글)
+            this.depth = parent.getDepth() + 1; // 부모 댓글의 깊이 + 1
+            this.orderNumber = parent.getOrderNumber(); // 부모 댓글의 순서를 그대로 물려받음
+        }
+    }
+
+    // 댓글 삭제 (소프트 삭제)
+    public void deleteComment() {
+        this.isDeleted = true;
+    }
+
+    // 좋아요 증가
+    public void increaseLikes() {
+        this.likes++;
+    }
+
+    // 좋아요 감소
+    public void decreaseLikes() {
+        if (this.likes > 0) {
+            this.likes--;
+        }
+    }
 }
