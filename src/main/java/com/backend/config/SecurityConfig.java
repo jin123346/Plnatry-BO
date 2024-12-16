@@ -1,6 +1,7 @@
 package com.backend.config;
 
 import com.backend.dto.request.AuthenticateDto;
+import com.backend.util.MyOauth2UserService;
 import com.backend.util.jwt.JwtTokenProvider;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
@@ -13,12 +14,10 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.CsrfConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -40,6 +39,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SecurityConfig implements WebMvcConfigurer {
     private final JwtTokenProvider jwtTokenProvider;
+    private final MyOauth2UserService myOauth2UserService;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -53,19 +53,26 @@ public class SecurityConfig implements WebMvcConfigurer {
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
                 .authorizeHttpRequests(auth -> auth
-
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/message/unread-messages").permitAll()
+                        .requestMatchers("/api/send-qna").permitAll()
+                        .requestMatchers("/api/send-cancellation").permitAll()
+                        .requestMatchers("/api/send-product-service").permitAll()
+                        .requestMatchers("/api/send-payment").permitAll()
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().permitAll()
                 )
+//                .oauth2Login(login -> {
+//                    login.userInfoEndpoint(endpoint -> endpoint.userService(myOauth2UserService))
+//                            .defaultSuccessUrl("/api/auth/social");
+//                })
                 .build();
     }
 
     @Bean
     protected CorsConfigurationSource corsConfigurationSource(){
         CorsConfiguration corsConfiguration = new CorsConfiguration();
-        corsConfiguration.setAllowedOriginPatterns(List.of("http://localhost:8010", "http://13.124.94.213:90"));
+        corsConfiguration.setAllowedOriginPatterns(List.of("http://localhost:8010", "http://127.0.0.1:8010/", "http://13.124.94.213:90"));
         corsConfiguration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         corsConfiguration.addAllowedHeader("Authorization");
         corsConfiguration.addAllowedHeader("Content-Type");

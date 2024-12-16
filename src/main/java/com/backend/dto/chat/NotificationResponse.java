@@ -2,6 +2,7 @@ package com.backend.dto.chat;
 
 import lombok.*;
 
+import java.time.LocalDateTime;
 import java.util.Map;
 
 @Getter
@@ -16,5 +17,6 @@ public class NotificationResponse {
     private String chatRoomId;
     private Integer unreadCount;
     private String lastMessage; // 해당 채팅방의 마지막 채팅
+    private LocalDateTime lastTimeStamp;
 
 }

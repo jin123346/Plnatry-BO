@@ -14,13 +14,13 @@ public class AttendanceScheduler {
 
     private final AttendanceService attendanceService;
 
-    @Scheduled(cron = "0 0 0 * * ?")
+    @Scheduled(cron = "0 27 11 * * ?")
     public void checkVacation(){
         attendanceService.markVacation();
         log.info("12시 연차 처리"+ LocalDateTime.now());
     }
 //
-//    @Scheduled(cron = "0 41 9 * * ?")
+//    @Scheduled(cron = "0 0 9 * * ?")
 //    public void checkLateUsers(){
 //        attendanceService.markAttendance("late");
 //        log.info("9시 지각 체크 "+ LocalDateTime.now());
@@ -28,9 +28,18 @@ public class AttendanceScheduler {
 
     @Scheduled(cron = "0 0 14 * * ?")
     public void checkAbsent(){
-        attendanceService.markVacation();
-        attendanceService.markAttendance("absent");
-        log.info("이거 된 거냐?"+ LocalDateTime.now());
+        try {
+            attendanceService.markVacation();
+            attendanceService.markAttendance("absent");
+            log.info("이거 된 거냐?"+ LocalDateTime.now());
+        }catch (Exception e){
+            log.error(e.getMessage());
+        }
+    }
+
+    @Scheduled(cron = "0 0 0 1 * ?")
+    public void makeAttendance(){
+        attendanceService.insertAllAttendance();
     }
 
 }

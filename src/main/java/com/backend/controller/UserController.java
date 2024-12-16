@@ -1,8 +1,14 @@
 package com.backend.controller;
 
+import com.backend.document.drive.Folder;
 import com.backend.dto.chat.UsersWithGroupNameDTO;
+import com.backend.dto.request.LoginDto;
 import com.backend.dto.request.admin.user.PatchAdminUserApprovalDto;
+import com.backend.dto.request.drive.NewDriveRequest;
+import com.backend.dto.request.user.PostUserRegisterDTO;
 import com.backend.dto.response.GetAdminUsersRespDto;
+import com.backend.dto.response.UserDto;
+import com.backend.dto.response.drive.FolderDto;
 import com.backend.dto.response.user.GetUsersAllDto;
 import com.backend.entity.group.Group;
 import com.backend.repository.UserRepository;
@@ -12,9 +18,13 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.data.domain.Page;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -111,5 +121,61 @@ public class UserController {
     }
 
 
+    @GetMapping("/my/user")
+    public ResponseEntity<?> getMyUser (Authentication auth){
+        Long userId = Long.valueOf(auth.getName());
+        try {
+            UserDto user = userService.getMyUser(userId);
+            log.info("유저 정보 "+user.toString());
+            return ResponseEntity.ok(user);
+        }catch (Exception e){
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
+        }
+    }
 
+
+    @PostMapping("/my/profile")
+    public ResponseEntity<?> uploadProfile(Authentication auth,
+                                           @RequestParam("file") MultipartFile file
+    ){
+        log.info("프로필 업로드 컨트롤러 "+file.getOriginalFilename());
+        Long userId = Long.valueOf(auth.getName());
+        try {
+            Boolean result = userService.uploadProfile(userId, file);
+            return ResponseEntity.ok().body(result);
+        }catch (Exception e){
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/my/message")
+    public ResponseEntity<?> updateMessage(Authentication auth,
+                                           @RequestBody String message ){
+        log.info("프로필 메세지 컨트롤러 "+ message);
+        Long userId = Long.valueOf(auth.getName());
+        return userService.updateMessage(userId,message);
+    }
+
+    @PostMapping("/my/modify")
+    public ResponseEntity<?> modifyUser(Authentication auth,
+                                        @RequestBody PostUserRegisterDTO dto){
+        log.info("회원 수정 컨트롤러 "+dto);
+        Long userId = Long.valueOf(auth.getName());
+        return userService.updateUser(userId, dto);
+    }
+
+    @PostMapping("/my/confirmPass")
+    public ResponseEntity<?> confirmPass(Authentication auth,
+                                         @RequestBody LoginDto pwd){
+        log.info("비밀번호 확인 컨트롤러 "+pwd.getPwd());
+        Long userId = Long.valueOf(auth.getName());
+        return userService.confirmPass(userId, pwd.getPwd());
+    }
+    @PostMapping("/my/updatePass")
+    public ResponseEntity<?> updatePass (Authentication auth,
+                                         @RequestBody LoginDto dto){
+        log.info("비밀번호 변경 컨트롤러 "+dto);
+        Long userId = Long.valueOf(auth.getName());
+        return userService.updatePass(userId, dto.getPwd());
+    }
 }

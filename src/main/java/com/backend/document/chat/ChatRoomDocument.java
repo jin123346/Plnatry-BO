@@ -25,7 +25,7 @@ public class ChatRoomDocument {
     private String chatRoomName; // 채팅방이름
     private String leader;  // 방장 uid
     private List<String> members;  // 채팅방 구성원 uid
-    private LocalDateTime lastUpdated; // 마지막으로 업데이트된 시간
+    private LocalDateTime lastTimeStamp; // 마지막으로 업데이트된 시간
 
     private List<ChatMapperDocument> chatMappers;
 
@@ -38,7 +38,7 @@ public class ChatRoomDocument {
                 .chatRoomName(this.chatRoomName)
                 .leader(this.leader)
                 .members(this.members)
-                .lastUpdated(this.lastUpdated)
+                .lastTimeStamp(this.lastTimeStamp)
                 .build();
     }
 }

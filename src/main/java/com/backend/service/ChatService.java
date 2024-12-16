@@ -7,7 +7,6 @@ import com.backend.document.chat.ChatRoomDocument;
 import com.backend.dto.chat.ChatMessageDTO;
 import com.backend.dto.chat.ChatRoomDTO;
 import com.backend.dto.chat.NotificationResponse;
-import com.backend.entity.user.User;
 import com.backend.repository.chat.ChatMapperRepository;
 import com.backend.repository.chat.ChatMemberRepository;
 import com.backend.repository.chat.ChatMessageRepository;
@@ -16,6 +15,8 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
@@ -39,22 +40,26 @@ public class ChatService {
         ChatRoomDocument chatRoomDocument = chatRoomDTO.toDocument();
         log.info("chatRoomDocument: " + chatRoomDocument);
         ChatRoomDocument savedDocument = chatRoomRepository.save(chatRoomDocument);
+        String leader = savedDocument.getLeader();
+        List<String> members = chatRoomDTO.getMembers();
+        members.add(leader);
 
-        if (savedDocument.getMembers() != null && savedDocument.getLeader() != null) {
-            ChatMapperDocument mapper = ChatMapperDocument.builder()
-                    .userId(savedDocument.getLeader())
-                    .chatRoomId(savedDocument.getId())
-                    .joinedAt(LocalDateTime.now())
-                    .build();
-            chatMapperRepository.save(mapper);
-
-            savedDocument.getMembers().forEach(uid -> {
+        if (members != null && leader != null) {
+            members.forEach(uid -> {
                 ChatMapperDocument mapperDocument = ChatMapperDocument.builder()
                         .userId(uid)
                         .chatRoomId(savedDocument.getId())
                         .joinedAt(LocalDateTime.now())
                         .build();
                 chatMapperRepository.save(mapperDocument);
+
+                ChatMemberDocument memberDocument = chatMemberRepository.findByUid(uid);
+                if (memberDocument.getRoomIds() != null) {
+                    memberDocument.getRoomIds().add(savedDocument.getId());
+                    chatMemberRepository.save(memberDocument);
+                }
+
+
             });
         }
 
@@ -89,50 +94,12 @@ public class ChatService {
         return chatRoomDTOS;
     }
 
-    public void updateUnreadCountsAndLastMessage(String chatRoomId, String senderId) {
-        // 사용자가 참여한 채팅방 가져오기
-        List<ChatMapperDocument> userChatMappings = chatMapperRepository.findByChatRoomId(chatRoomId);
-        log.info("userChatMappings: " + userChatMappings);
-        for (ChatMapperDocument mapper : userChatMappings) {
-            String userId = mapper.getUserId();
-            log.info("userId: " + userId);
-            if (!userId.equals(senderId)) {
-                // 해당 사용자의 읽지 않은 메시지 수 업데이트
-                long count = getUnreadMessageCount(senderId, chatRoomId).getCount();
-                log.info("count: " + count);
-                // 읽지 않은 메시지 수 알림 전송
-                NotificationResponse notification = new NotificationResponse();
-                notification.setType("unreadCount");
-                notification.setChatRoomId(chatRoomId);
-                notification.setUnreadCount((int) count);
-                log.info("notification : ", notification);
-                messagingTemplate.convertAndSend("/topic/notifications/" + userId, notification);
-                // 마지막 메시지 알림 전송
-                String lastMessage = chatMessageRepository.findFirstByRoomIdOrderByTimeStampDesc(chatRoomId).getContent();
-                log.info("lastMessage: " + lastMessage);
-                NotificationResponse lastMessageNotification = new NotificationResponse();
-                lastMessageNotification.setType("lastMessage");
-                lastMessageNotification.setChatRoomId(chatRoomId);
-                lastMessageNotification.setLastMessage(lastMessage);
-                log.info("lastMessageNotification : ", lastMessageNotification);
-                messagingTemplate.convertAndSend("/topic/notifications/" + userId, lastMessageNotification);
-            }
+    public ChatMemberDocument saveChatMember(ChatMemberDocument chatMemberDocument) {
+        if (chatMemberDocument != null) {
+            ChatMemberDocument savedDocument = chatMemberRepository.save(chatMemberDocument);
+            return savedDocument;
         }
-    }
-
-
-    public ChatMemberDocument saveChatMember(String chatRoomId, User user, String groupName) {
-        ChatMemberDocument chatMemberDocument = new ChatMemberDocument();
-        chatMemberDocument.setUid(user.getUid());
-        chatMemberDocument.setEmail(user.getEmail());
-        chatMemberDocument.setHp(user.getHp());
-        chatMemberDocument.setLevel(user.getLevel());
-        chatMemberDocument.setName(user.getName());
-        chatMemberDocument.setGroup(groupName);
-        chatMemberDocument.getRoomIds().add(chatRoomId);
-
-        ChatMemberDocument savedDocument = chatMemberRepository.save(chatMemberDocument);
-        return savedDocument;
+        return null;
     }
 
     public ChatRoomDocument updateChatRoomFavorite(ChatRoomDTO chatRoomDTO) {
@@ -194,66 +161,147 @@ public class ChatService {
         return null;
     }
 
-    // 특정 채팅방의 최신 메시지 로드
-    public List<ChatMessageDocument> getLatestMessages(String chatRoomId) {
-        PageRequest pageRequest = PageRequest.of(0, PAGE_SIZE);
-        return chatMessageRepository.findByRoomIdOrderByTimeStampDesc(chatRoomId, pageRequest);
+    // 특정 채팅방의 마지막으로 읽은 메시지부터 로드
+    public List<ChatMessageDocument> getLatestMessages(String chatRoomId, String uid) {
+        // 사용자와 채팅방에 대한 매퍼 정보 조회
+        Optional<ChatMapperDocument> chatMapperOpt = chatMapperRepository.findByUserIdAndChatRoomId(uid, chatRoomId);
+        // 채팅방의 가장 최신 메시지 조회
+        Optional<ChatMessageDocument> chatMessageOpt = chatMessageRepository.findFirstByRoomIdOrderByTimeStampDesc(chatRoomId);
 
+        if (chatMapperOpt.isPresent() && chatMessageOpt.isPresent()) {
+            ChatMapperDocument chatMapperDocument = chatMapperOpt.get();
+            LocalDateTime lastReadTime = chatMapperDocument.getLastReadTimeStamp();
+
+            // 읽지 않은 메시지 조회 (최신 순으로 최대 20개)
+            Pageable unreadPage = PageRequest.of(0, 20);
+            List<ChatMessageDocument> unreadMessages = chatMessageRepository.findByRoomIdAndTimeStampAfterOrderByTimeStampDesc(chatRoomId, lastReadTime, unreadPage);
+            Collections.reverse(unreadMessages);
+
+            if (!unreadMessages.isEmpty()) {
+                unreadMessages.get(0).setStatus(2);
+            }
+
+            if (!unreadMessages.isEmpty()) {
+                // 읽지 않은 메시지가 20개 미만일 경우 추가 메시지 불러오기
+                if (unreadMessages.size() < 20) {
+                    int additionalCount = 20 - unreadMessages.size();
+                    LocalDateTime firstUnreadTimestamp = unreadMessages.get(0).getTimeStamp();
+
+                    Pageable additionalPage = PageRequest.of(0, additionalCount);
+                    List<ChatMessageDocument> additionalMessages = chatMessageRepository.findByRoomIdAndTimeStampBeforeOrderByTimeStampDesc(chatRoomId, firstUnreadTimestamp, additionalPage);
+
+                    // 추가 메시지를 역순으로 정렬하여 올바른 순서로 합치기
+                    Collections.reverse(additionalMessages);
+                    unreadMessages.addAll(0, additionalMessages);
+                }
+                return unreadMessages;
+            } else {
+                // 읽지 않은 메시지가 없을 경우 최신 20개 메시지 불러오기
+                Pageable latestPage = PageRequest.of(0, 20);
+                List<ChatMessageDocument> latestMessages = chatMessageRepository.findByRoomIdOrderByTimeStampDesc(chatRoomId, latestPage);
+
+                // 올바른 시간 순서로 정렬
+                Collections.reverse(latestMessages);
+                return latestMessages;
+            }
+        }
+        // 매퍼 정보 또는 메시지가 없을 경우 빈 리스트 반환
+        return Collections.emptyList();
     }
+
 
     // 특정 채팅방의 이전 메시지 로드
     public List<ChatMessageDocument> getOlderMessages(String chatRoomId, LocalDateTime beforeTimestamp) {
-        PageRequest pageRequest = PageRequest.of(0, PAGE_SIZE);
-        return chatMessageRepository.findByRoomIdAndTimeStampBeforeOrderByTimeStampDesc(chatRoomId, beforeTimestamp, pageRequest);
+        log.info("이전 메시지 로드 서비스 호출");
+
+        // beforeTimestamp보다 작은 메시지들 중 최신 순으로 PAGE_SIZE만큼 조회
+        PageRequest pageRequest = PageRequest.of(0, PAGE_SIZE, Sort.by("timeStamp").descending());
+        List<ChatMessageDocument> olderMessages = chatMessageRepository.findByRoomIdAndTimeStampBeforeOrderByTimeStampDesc(chatRoomId, beforeTimestamp, pageRequest);
+
+        return olderMessages;
     }
 
-    // 사용자가 채팅방을 읽었다고 표시
-    public void markAsRead(String userId, String chatRoomId, String readTimestamp) {
-        Optional<ChatMapperDocument> chatMapperOpt = chatMapperRepository.findByUserIdAndChatRoomId(userId, chatRoomId);
-        ChatMapperDocument chatMapper;
 
-        if (chatMapperOpt.isPresent()) {
-            chatMapper = chatMapperOpt.get();
-        } else {
-            // 사용자와 채팅방이 존재하는지 확인
-            if (!chatMemberRepository.existsById(userId)) {
-                throw new IllegalArgumentException("Invalid user ID");
+    // 사용자가 채팅방을 읽었다고 표시
+    public void markAsRead(String userId, String chatRoomId) {
+        Optional<ChatMessageDocument> chatMessageOpt = chatMessageRepository.findFirstByRoomIdOrderByTimeStampDesc(chatRoomId);
+
+        if (chatMessageOpt.isPresent()) {
+            ChatMessageDocument latestMessage = chatMessageOpt.get();
+            LocalDateTime newLastReadTimestamp;
+            if (latestMessage != null) {
+                newLastReadTimestamp = latestMessage.getTimeStamp();
+                log.info("마지막 메시지 : " + newLastReadTimestamp);
+            } else {
+                newLastReadTimestamp = LocalDateTime.now();
             }
-            if (!chatRoomRepository.existsById(chatRoomId)) {
-                throw new IllegalArgumentException("Invalid chat room ID");
-            }
-            // 처음 읽는 경우 생성
-            chatMapper = ChatMapperDocument.builder()
-                    .userId(userId)
-                    .chatRoomId(chatRoomId)
-                    .joinedAt(LocalDateTime.parse(readTimestamp)) // 채팅방에 참여한 시간 설정
-                    .build();
+            chatMapperRepository.findByUserIdAndChatRoomId(userId, chatRoomId).ifPresent(chatMapper -> {
+                chatMapper.setLastReadTimeStamp(newLastReadTimestamp);
+                chatMapperRepository.save(chatMapper);
+                log.info("markAsRead called for userId: " + userId + ", chatRoomId: " + chatRoomId + ", newLastReadTimestamp: " + newLastReadTimestamp);
+            });
         }
-        chatMapper.setLastReadTimeStamp(LocalDateTime.parse(readTimestamp));
-        chatMapperRepository.save(chatMapper);
+
     }
 
     // 사용자가 읽지 않은 메시지 수 가져오기
     public ChatMessageDTO getUnreadMessageCount(String userId, String chatRoomId) {
 
-        Optional<ChatMapperDocument> userChatRoomOpt = chatMapperRepository.findByUserIdAndChatRoomId(userId, chatRoomId);
-        if (userChatRoomOpt.isEmpty()) {
-            long count = chatMessageRepository.countByRoomIdAndTimeStampAfter(chatRoomId, LocalDateTime.MIN);
-            ChatMessageDocument chatMessageDocument = chatMessageRepository.findFirstByRoomIdOrderByTimeStampDesc(chatRoomId);
+        Optional<ChatMapperDocument> chatMapperOpt = chatMapperRepository.findByUserIdAndChatRoomId(userId, chatRoomId);
+        Optional<ChatMessageDocument> chatMessageOpt = chatMessageRepository.findFirstByRoomIdOrderByTimeStampDesc(chatRoomId);
+
+        if (chatMapperOpt.isPresent() && chatMessageOpt.isPresent()) {
+            ChatMapperDocument chatMapperDocument = chatMapperOpt.get();
+            LocalDateTime lastReadTimestamp = chatMapperDocument.getLastReadTimeStamp() != null
+                    ? chatMapperDocument.getLastReadTimeStamp()
+                    : chatMapperDocument.getJoinedAt(); // lastReadTimestamp가 없으면 joinedAt을 기준으로
+
+            ChatMessageDocument chatMessageDocument = chatMessageOpt.get();
             ChatMessageDTO chatMessageDTO = chatMessageDocument.toDTO();
+            long count = chatMessageRepository.countByRoomIdAndTimeStampAfter(chatRoomId, lastReadTimestamp);
+            log.info("안읽은 수 : " + count);
             chatMessageDTO.setCount(count);
             return chatMessageDTO;
         }
+        return ChatMessageDTO.builder()
+                .count(0)
+                .build();
+    }
 
-        ChatMapperDocument userChatRoom = userChatRoomOpt.get();
-        LocalDateTime lastReadTimestamp = userChatRoom.getLastReadTimeStamp() != null
-                ? userChatRoom.getLastReadTimeStamp()
-                : userChatRoom.getJoinedAt(); // lastReadTimestamp가 없으면 joinedAt을 기준으로
+    public void updateUnreadCountsAndLastMessageAndLastTimeStamp(String chatRoomId, String senderId) {
+        // 사용자가 참여한 채팅방 가져오기
+        List<ChatMapperDocument> userChatMappings = chatMapperRepository.findByChatRoomId(chatRoomId);
+        log.info("userChatMappings: " + userChatMappings);
+        Optional<ChatMessageDocument> chatMessageOpt = chatMessageRepository.findFirstByRoomIdOrderByTimeStampDesc(chatRoomId);
+        if (chatMessageOpt.isPresent()) {
+            ChatMessageDocument chatMessageDocument = chatMessageOpt.get();
+            LocalDateTime lastTimeStamp = chatMessageDocument.getTimeStamp();
 
-        long count = chatMessageRepository.countByRoomIdAndTimeStampAfter(chatRoomId, lastReadTimestamp);
-        ChatMessageDTO chatMessageDTO = new ChatMessageDTO();
-        chatMessageDTO.setCount(count);
-        return chatMessageDTO;
+            for (ChatMapperDocument mapper : userChatMappings) {
+                String userId = mapper.getUserId();
+                log.info("userId: " + userId);
+                if (!userId.equals(senderId)) {
+                    // 해당 사용자의 읽지 않은 메시지 수 업데이트
+                    long count = getUnreadMessageCount(userId, chatRoomId).getCount();
+                    log.info("count: " + count);
+                    // 읽지 않은 메시지 수 알림 전송
+                    NotificationResponse notification = new NotificationResponse();
+                    notification.setType("unreadCount");
+                    notification.setChatRoomId(chatRoomId);
+                    notification.setUnreadCount((int) count);
+                    messagingTemplate.convertAndSend("/topic/notifications/" + userId, notification);
+                }
+
+                // 마지막 메시지 알림 전송
+                log.info("lastMessage: " + chatMessageDocument);
+                NotificationResponse lastMessageNotification = new NotificationResponse();
+                lastMessageNotification.setType("lastMessage");
+                lastMessageNotification.setChatRoomId(chatRoomId);
+                lastMessageNotification.setLastTimeStamp(chatMessageDocument.getTimeStamp());
+                lastMessageNotification.setLastMessage(chatMessageDocument.getContent());
+                messagingTemplate.convertAndSend("/topic/notifications/" + userId, lastMessageNotification);
+            }
+        }
     }
 
 }
