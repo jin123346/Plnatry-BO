@@ -358,7 +358,6 @@ public class ShareService {
         }
 
 
-
         String groupName = (loginUser.getGroupMappers() == null || loginUser.getGroupMappers().isEmpty())
                 ? "개인"
                 : loginUser.getGroupMappers().get(0).getGroup().getName();

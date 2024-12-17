@@ -10,6 +10,7 @@ import com.backend.repository.community.CommentRepository;
 import com.backend.repository.community.PostRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +25,9 @@ public class CommentService {
     private final CommentRepository commentRepository;
     private final UserRepository userRepository;
     private final PostRepository postRepository;
+
+
+
 
     public CommentResponseDTO convertToResponseDto(Comment comment) {
         CommentResponseDTO dto = new CommentResponseDTO();
@@ -50,11 +54,17 @@ public class CommentService {
     }
 
     public List<CommentResponseDTO> getCommentsByPostId(Long postId) {
-        // 댓글 조회 시 최상위 댓글만 가져오고, 대댓글은 재귀적으로 DTO로 변환
+        log.info("댓글 조회 요청: postId = {}", postId);
+
         List<Comment> comments = commentRepository.findByPost_PostIdAndParentIsNull(postId);
+        log.info("조회된 최상위 댓글 수: {}", comments.size());
 
         return comments.stream()
-                .map(this::convertToResponseDto)
+                .map(comment -> {
+                    log.info("댓글 내용: {}, 작성자: {}", comment.getContent(),
+                            comment.getUser() != null ? comment.getUser().getName() : "작성자 없음");
+                    return convertToResponseDto(comment);
+                })
                 .collect(Collectors.toList());
     }
 
@@ -95,6 +105,7 @@ public class CommentService {
         // 댓글 내용 수정
         comment.setContent(requestDto.getContent());
     }
+
     // 댓글 삭제 (소프트 삭제)
     @Transactional
     public void deleteComment(Long commentId) {
@@ -105,5 +116,17 @@ public class CommentService {
         comment.setIsDeleted(true);
     }
 
+    @Transactional
+    public CommentResponseDTO likeComment(Long postId, Long commentId, Long userId) {
+        Comment comment = commentRepository.findByPost_PostIdAndCommentId(postId, commentId)
+                .orElseThrow(() -> new IllegalArgumentException("댓글이 존재하지 않습니다."));
+
+        boolean isLiked = comment.toggleLike(userId);
+
+        commentRepository.save(comment);
+
+        return new CommentResponseDTO(comment, isLiked);
     }
+
+}
 
