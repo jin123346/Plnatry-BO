@@ -44,6 +44,7 @@ public class CommentResponseDTO {
         this.commentId = comment.getCommentId();
         this.content = comment.getContent();
         this.writer = comment.getUser().getName();
+        this.postId = comment.getPost().getPostId();
 
     }
 
