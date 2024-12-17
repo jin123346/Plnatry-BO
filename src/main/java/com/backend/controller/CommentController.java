@@ -12,6 +12,8 @@ import com.backend.service.CommentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -27,7 +29,7 @@ public class CommentController {
 
 
     @GetMapping("/comments")
-    public ResponseEntity<List<CommentResponseDTO>> getComments(@RequestParam Long postId) {
+    public ResponseEntity<List<CommentResponseDTO>> getComments(@PathVariable Long postId) {
         List<CommentResponseDTO> comments = commentService.getCommentsByPostId(postId);
         return ResponseEntity.ok(comments);
     }
@@ -50,5 +52,13 @@ public class CommentController {
         commentService.deleteComment(commentId);
         return ResponseEntity.ok("댓글이 성공적으로 삭제되었습니다.");
     }
+
+    @PostMapping("/comments/{commentId}/like")
+    public ResponseEntity<String> likeComment(@PathVariable Long postIdId, @PathVariable Long commentId) {
+        commentService.likeComment(commentId);
+        return ResponseEntity.ok("좋아요 상태가 변경되었습니다.");
+    }
+
+
 
 }

@@ -5,7 +5,9 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Entity
 @Getter
@@ -44,7 +46,6 @@ public class Comment extends BaseTimeEntity {
 
     @Column(nullable = false)
     private Boolean isDeleted = false;
-
 
 
     @Column(nullable = false)

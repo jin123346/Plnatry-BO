@@ -50,11 +50,17 @@ public class CommentService {
     }
 
     public List<CommentResponseDTO> getCommentsByPostId(Long postId) {
-        // 댓글 조회 시 최상위 댓글만 가져오고, 대댓글은 재귀적으로 DTO로 변환
+        log.info("댓글 조회 요청: postId = {}", postId);
+
         List<Comment> comments = commentRepository.findByPost_PostIdAndParentIsNull(postId);
+        log.info("조회된 최상위 댓글 수: {}", comments.size());
 
         return comments.stream()
-                .map(this::convertToResponseDto)
+                .map(comment -> {
+                    log.info("댓글 내용: {}, 작성자: {}", comment.getContent(),
+                            comment.getUser() != null ? comment.getUser().getName() : "작성자 없음");
+                    return convertToResponseDto(comment);
+                })
                 .collect(Collectors.toList());
     }
 
@@ -95,6 +101,7 @@ public class CommentService {
         // 댓글 내용 수정
         comment.setContent(requestDto.getContent());
     }
+
     // 댓글 삭제 (소프트 삭제)
     @Transactional
     public void deleteComment(Long commentId) {
@@ -105,5 +112,18 @@ public class CommentService {
         comment.setIsDeleted(true);
     }
 
+    @Transactional
+    public void likeComment(Long commentId) {
+        Comment comment = commentRepository.findById(commentId)
+                .orElseThrow(() -> new IllegalArgumentException("댓글이 존재하지 않습니다."));
+
+        if (comment.getLikes() == 0) {
+            comment.setLikes(1L);
+        } else {
+            comment.setLikes(0L);
+        }
+
+        commentRepository.save(comment);
     }
+}
 
