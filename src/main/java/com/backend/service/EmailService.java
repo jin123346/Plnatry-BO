@@ -284,7 +284,7 @@ public class EmailService {
         try {
             for(Invitation invitation: invitations){
                 String subject = "PLANTRY에서 새로운 폴더로 초대합니다!";
-                String link = "http://localhost:8010/accept-invitation/" + invitation.getId();
+                String link = "http://13.124.94.213:90/accept-invitation/" + invitation.getId();
                 // HTML 이메일 내용
                 String content = """
                     <!DOCTYPE html>
