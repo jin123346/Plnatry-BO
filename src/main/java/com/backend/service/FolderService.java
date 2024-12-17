@@ -166,7 +166,7 @@ public class FolderService {
 
 
     public List<FolderDto> sharedFolder(String uid){
-        List<Folder> folders = folderMogoRepository.findBySharedUsersUidAndTarget(uid,"target");
+        List<Folder> folders = folderMogoRepository.findBySharedUsersUid(uid);
 
         return folders.stream().map(Folder::toDTO).collect(Collectors.toList());
     }
