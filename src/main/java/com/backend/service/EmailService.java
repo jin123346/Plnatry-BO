@@ -2,6 +2,8 @@ package com.backend.service;
 
 import com.backend.document.drive.Folder;
 import com.backend.document.drive.Invitation;
+import jakarta.mail.Message;
+import jakarta.mail.internet.InternetAddress;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -323,7 +325,7 @@ public class EmailService {
                     """.formatted(folder.getName(), link, link);
 
                 sendEmail(
-                        new String[]{fromEmail, invitation.getEmail()},
+                        new String[]{invitation.getEmail()},
                         subject,
                         content,
                         null

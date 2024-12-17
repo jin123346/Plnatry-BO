@@ -91,8 +91,15 @@ public class ShareService {
             for(SharedUser sharedUser : shareRequestDto.getSharedUsers()){
                 Optional<User> user = userRepository.findByEmail(sharedUser.getEmail());
 
+
                 if(user.isPresent()){
                     User user1 = user.get();
+
+
+                    String groupName = (user1.getGroupMappers() == null || user1.getGroupMappers().isEmpty())
+                            ? "개인"
+                            : user1.getGroupMappers().get(0).getGroup().getName();
+
                     SharedUser users  = SharedUser.builder()
                             .uid(user1.getUid())
                             .id(user1.getId())
@@ -100,7 +107,7 @@ public class ShareService {
                             .name(user1.getName())
                             .email(user1.getEmail())
                             .authority(user1.getRole().toString())
-                            .group(user1.getGroupMappers()!=null ?user1.getGroupMappers().get(0).getGroup().getName() : "없음")
+                            .group(groupName)
                             .permission(sharedUser.getPermission())
                             .build();
                     savedUser.add(users);
@@ -352,11 +359,13 @@ public class ShareService {
 
 
 
-
+        String groupName = (loginUser.getGroupMappers() == null || loginUser.getGroupMappers().isEmpty())
+                ? "개인"
+                : loginUser.getGroupMappers().get(0).getGroup().getName();
         SharedUser sharedUser = SharedUser.builder()
                 .email(invitation.getEmail())
                 .id(loginUser.getId())
-                .group(loginUser.getGroupMappers() != null ? loginUser.getGroupMappers().get(0).getGroup().getName() : "개인")
+                .group(groupName)
                 .name(loginUser.getName())
                 .permission(invitation.getPermission())
                 .profile(loginUser.getProfileImgPath())
@@ -365,6 +374,7 @@ public class ShareService {
                 .build();
 
         ShareRequestDto shareRequestDto = ShareRequestDto.builder()
+                .userType("individual")
                 .sharedUsers(Collections.singletonList(sharedUser))
                 .build();
 
