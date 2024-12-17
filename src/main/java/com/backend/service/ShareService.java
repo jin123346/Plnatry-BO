@@ -106,19 +106,21 @@ public class ShareService {
                     savedUser.add(users);
 
                 }else{
+                    Optional<Invitation> alreadyInvitation =  invitationRepository.findByEmail(sharedUser.getEmail());
+                    if(alreadyInvitation.isEmpty()){
+                        Invitation invitation = Invitation.builder()
+                                .status("PENDING")
+                                .type(type)
+                                .sharedId(id)
+                                .email(sharedUser.getEmail())
+                                .permission(sharedUser.getPermission())
+                                .createdAt(LocalDateTime.now())
+                                .build();
 
-                    Invitation invitation = Invitation.builder()
-                            .status("PENDING")
-                            .type(type)
-                            .id(id)
-                            .email(sharedUser.getEmail())
-                            .permission(sharedUser.getPermission())
-                            .build();
-                    Invitation saved = invitationRepository.save(invitation);
-
-                    saveInvitations.add(saved);
-
-
+                        invitation.onExpiredAT();
+                        Invitation saved = invitationRepository.save(invitation);
+                        saveInvitations.add(saved);
+                    }
 
 
                 }
@@ -311,5 +313,84 @@ public class ShareService {
                 .set("sharedDept", shardedDeptJson)
                 .set("isShared", isShared);
         mongoTemplate.updateMulti(query, fileUpdate, FileMogo.class);
+    }
+
+    public  Map<String, Object> invitationInvaild(String invitationId,String shareUid){
+        Map<String, Object> response = new HashMap<>();
+        Invitation invitation = invitationRepository.findById(invitationId)
+                .orElse(null);
+        User loginUser = userRepository.findByUid(shareUid)
+                .orElse(null);
+
+        if (invitation == null || loginUser == null) {
+            response.put("status", "fail");
+            response.put("message", "초대장 또는 사용자를\n 찾을 수 없습니다.");
+            return response;
+        }
+
+        if (!loginUser.getEmail().equals(invitation.getEmail())) {
+            response.put("status", "fail");
+            response.put("message", "로그인한 사용자와 초대장의 이메일이 \n일치하지 않습니다.");
+            return response;
+        }
+
+        if (invitation.getExpiredAt().isBefore(LocalDateTime.now())) {
+            invitation.setState("expired"); // 상태를 'expired'로 설정
+            response.put("status", "fail");
+            response.put("message", "이 초대장은 \n만료되었습니다.");
+            invitationRepository.save(invitation); // 상태 업데이트
+            return response;
+        }
+
+        // 이미 공유된 사용자 여부 검증 (예시)
+        boolean alreadyShared = checkIfAlreadyShared(invitation.getSharedId(), loginUser.getUid());
+        if (alreadyShared || invitation.getStatus().equals("ACCEPTED")) {
+            response.put("status", "fail");
+            response.put("message", "이 초대장은 \n이미 공유되었습니다.");
+            return response;
+        }
+
+
+
+
+        SharedUser sharedUser = SharedUser.builder()
+                .email(invitation.getEmail())
+                .id(loginUser.getId())
+                .group(loginUser.getGroupMappers() != null ? loginUser.getGroupMappers().get(0).getGroup().getName() : "개인")
+                .name(loginUser.getName())
+                .permission(invitation.getPermission())
+                .profile(loginUser.getProfileImgPath())
+                .uid(loginUser.getUid())
+                .authority(loginUser.getRole() != null ? loginUser.getRole().toString() : "default") // 기본 권한 값 설정                            .
+                .build();
+
+        ShareRequestDto shareRequestDto = ShareRequestDto.builder()
+                .sharedUsers(Collections.singletonList(sharedUser))
+                .build();
+
+
+        boolean result = shareUser(shareRequestDto,invitation.getType(),invitation.getSharedId());
+
+        if (result) {
+            response.put("sharedId", invitation.getSharedId());
+            response.put("status", "success");
+            response.put("message", "Invitation validated successfully.");
+            invitation.setState("accepted");
+            invitationRepository.save(invitation); // 상태 업데이트
+
+            return response;
+        } else {
+            response.put("status", "fail");
+            response.put("message", "Failed to process invitation.");
+            return response;
+        }
+
+
+    }
+
+    // 이미 공유된 사용자인지 검증하는 메서드
+    private boolean checkIfAlreadyShared(String sharedId, String uid) {
+        // 공유된 사용자 목록 조회 및 검증
+        return  folderMogoRepository.findByIdAndSharedUsersUid(sharedId, uid).isPresent();
     }
 }
