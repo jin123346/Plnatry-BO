@@ -1,15 +1,13 @@
 package com.backend.controller;
 
 import com.backend.document.chat.ChatMemberDocument;
+import com.backend.dto.request.drive.NewDriveRequest;
 import com.backend.dto.request.user.*;
 import com.backend.dto.response.user.TermsDTO;
 import com.backend.entity.group.GroupMapper;
 import com.backend.entity.user.CardInfo;
 import com.backend.entity.user.User;
-import com.backend.service.ChatService;
-import com.backend.service.GroupService;
-import com.backend.service.AttendanceService;
-import com.backend.service.UserService;
+import com.backend.service.*;
 import com.backend.util.Role;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +30,7 @@ public class RegisterController {
     private final ChatService chatService;
     private final GroupService groupService;
     private final AttendanceService attendanceService;
+    private final FolderService folderService;
 
     @GetMapping("/terms")
     public ResponseEntity<?> termsList(){
@@ -140,6 +139,20 @@ public class RegisterController {
                     .build();
 
             ChatMemberDocument savedDocument = chatService.saveChatMember(chatMemberDocument);
+
+            //등록시 드라이브 생성
+            NewDriveRequest newDriveRequest = NewDriveRequest.builder()
+                    .type("drive")
+                    .description(insertUser.getName()+"의 드라이브")
+                    .driveMaster(insertUser.getUid())
+                    .order(0)
+                    .owner(insertUser.getUid())
+                    .name(insertUser.getName())
+                    .status(1)
+                    .masterEmail(insertUser.getEmail())
+                    .build();
+            folderService.createRootDrive(newDriveRequest);
+
             if (savedDocument != null) {
                 return ResponseEntity.ok().body("success");
             }

@@ -146,7 +146,7 @@ public class User {
             case 4 -> "과장";
             case 5 -> "차장";
             case 6 -> "부장";
-            default -> "외주";
+            default -> "개인";
         };
     }
 
