@@ -140,13 +140,15 @@ public class User {
 
     public String selectLevelString(){
         return switch (level) {
+            case 0 -> "개인";
             case 1 -> "사원";
             case 2 -> "주임";
             case 3 -> "대리";
             case 4 -> "과장";
             case 5 -> "차장";
             case 6 -> "부장";
-            default -> "개인";
+            case 7 -> "관리자"; //회사 관리자
+            default -> "외주";
         };
     }
 

@@ -114,9 +114,12 @@ public class UserService {
         return usersWithGroupNameDTOs;
     }
 
-    public Page<GetUsersAllDto> getUsersAll(int page) {
+    public Page<GetUsersAllDto> getUsersAll(int page,String company) {
         Pageable pageable = PageRequest.of(page, 5);
-        Page<User> users = userRepository.findAllByCompanyAndStatusIsNotOrderByLevelDesc("1246857",0,pageable);
+        if(company == null || company.isEmpty()){
+            return null;
+        }
+        Page<User> users = userRepository.findAllByCompanyAndStatusIsNotOrderByLevelDesc(company,0,pageable);
         Page<GetUsersAllDto> dtos = users.map(User::toGetUsersAllDto);
         return dtos;
     }
@@ -128,9 +131,12 @@ public class UserService {
         return dtos;
     }
 
-    public Page<GetUsersAllDto> getUsersAllByKeywordAndGroup(int page, String keyword, Long id) {
+    public Page<GetUsersAllDto> getUsersAllByKeywordAndGroup(int page, String keyword, Long id,String company) {
         Pageable pageable = PageRequest.of(page, 5);
-        Page<User> users = userRepository.findAllByCompanyAndNameContainingAndStatusIsNotAndGroupMappers_Group_IdOrderByLevelDesc("1246857",keyword,0,id,pageable);
+        if(company == null || company.isEmpty()){
+            return null;
+        }
+        Page<User> users = userRepository.findAllByCompanyAndNameContainingAndStatusIsNotAndGroupMappers_Group_IdOrderByLevelDesc(company,keyword,0,id,pageable);
         Optional<Group> group = groupRepository.findById(id);
         String groupName = group.get().getName();
         if(groupName.isEmpty()){
@@ -140,9 +146,12 @@ public class UserService {
         return dtos;
     }
 
-    public Page<GetUsersAllDto> getUsersAllByGroup(int page, Long id) {
+    public Page<GetUsersAllDto> getUsersAllByGroup(int page, Long id,String company) {
         Pageable pageable = PageRequest.of(page, 5);
-        Page<User> users = userRepository.findAllByCompanyAndStatusIsNotAndGroupMappers_Group_IdOrderByLevelDesc("1246857",0,id,pageable);
+        if(company == null || company.isEmpty()){
+            return null;
+        }
+        Page<User> users = userRepository.findAllByCompanyAndStatusIsNotAndGroupMappers_Group_IdOrderByLevelDesc(company,0,id,pageable);
         Optional<Group> group = groupRepository.findById(id);
         String groupName = group.get().getName();
         if(groupName.isEmpty()){
@@ -184,7 +193,7 @@ public class UserService {
                             .country(dto.getCountry())
                             .addr2(dto.getAddr2())
                             .status(1)
-                            .level(0)
+                            .level(dto.getLevel())
                             .day(dto.getDay())
                             .company(dto.getCompany())
                             .companyName(dto.getCompanyName())
@@ -226,6 +235,7 @@ public class UserService {
                                 .paymentCardNick(paymentInfoDTO.getPaymentCardNick())
                                 .paymentCardExpiration(paymentInfoDTO.getPaymentCardExpiration())
                                 .paymentCardCvc(paymentInfoDTO.getPaymentCardCvc())
+                                .cardCompany(paymentInfoDTO.getCardCompany())
                                 .build();
         CardInfo cardInfo = cardInfoRepository.save(entity);
         return cardInfo;
