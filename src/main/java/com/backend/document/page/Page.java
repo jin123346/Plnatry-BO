@@ -53,4 +53,16 @@ public class Page {
     public void putUsers(String result) {
         this.ownerUid = result;
     }
+
+    public void patchRole(String readonly) {
+        this.readOnly = readonly;
+    }
+
+    public void patchLeader(String s) {
+        this.leader = s;
+    }
+
+    public void patchContent(String updatedContent) {
+        this.content = updatedContent;
+    }
 }
