@@ -197,6 +197,40 @@ public class SftpService {
 
     }
 
+    public String createPageFolder(String pageId, String parentPath) {
+
+        String remoteDir = parentPath +"/"+ pageId;
+        try {
+            JSch jsch = new JSch();
+            Session session = jsch.getSession(SFTP_USER, SFTP_HOST, SFTP_PORT);
+            session.setPassword(SFTP_PASSWORD);
+            session.setConfig("StrictHostKeyChecking", "no");
+            session.connect();
+
+            ChannelSftp channelSftp = (ChannelSftp) session.openChannel("sftp");
+            channelSftp.connect();
+
+            try {
+                channelSftp.stat(remoteDir); // 폴더가 존재하면 stat()이 예외를 발생시키지 않음
+                log.info("폴더가 이미 존재합니다: {}", remoteDir);
+            } catch (SftpException e) {
+                // 폴더가 존재하지 않으면 예외 발생하고 폴더를 생성
+                channelSftp.mkdir(remoteDir);
+                log.info("폴더를 성공적으로 생성했습니다: {}", remoteDir);
+            }
+
+            channelSftp.disconnect();
+            session.disconnect();
+
+            log.info("Folder created and permissions set successfully on SFTP: {}", remoteDir);
+            return remoteDir;
+        } catch (Exception e) {
+            log.error("Error while creating folder: {}", e.getMessage());
+            return null;
+        }
+
+    }
+
 
     public String uploadFile(String localFilePath, String remoteDir, String remoteFileName) {
         try {
