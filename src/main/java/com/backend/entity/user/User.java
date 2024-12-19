@@ -63,12 +63,6 @@ public class User {
     @Column(name = "name")
     private String name;
 
-//    @Column(name = "first_name")
-//    private String firstName;
-//
-//    @Column(name = "last_name")
-//    private String lastName;
-
     @Column(name = "city")
     private String addr1;
 
@@ -140,13 +134,15 @@ public class User {
 
     public String selectLevelString(){
         return switch (level) {
+            case 0 -> "개인";
             case 1 -> "사원";
             case 2 -> "주임";
             case 3 -> "대리";
             case 4 -> "과장";
             case 5 -> "차장";
             case 6 -> "부장";
-            default -> "개인";
+            case 7 -> "관리자"; //회사 관리자
+            default -> "외주";
         };
     }
 
@@ -325,4 +321,7 @@ public class User {
     public void updatePass(String pwd) {
         this.pwd = pwd;
     }
+
+    public void updateStatus(int status) { this.status = status; }
+
 }

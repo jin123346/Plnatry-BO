@@ -2,12 +2,16 @@ package com.backend.service.mongoDB;
 
 import com.backend.document.page.Page;
 import com.backend.dto.request.page.PageDto;
+import com.backend.dto.response.page.GetPageUsersRole;
 import com.backend.dto.response.user.GetUsersAllDto;
 import com.backend.entity.folder.Permission;
 import com.backend.entity.user.User;
 import com.backend.repository.UserRepository;
 import com.backend.repository.page.PageRepository;
 import com.backend.service.PermissionService;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.http.HttpStatus;
@@ -15,6 +19,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -136,12 +141,12 @@ public class PageService {
         Set<String> setIds = new HashSet<>(ids);
         Set<String> setOriginUids = new HashSet<>(originUids);
 
-        Set<String> added = new HashSet<>(setOriginUids);
-        added.removeAll(setIds);
+        Set<String> missing = new HashSet<>(setOriginUids);
+        missing.removeAll(setIds);
 
         // 빠진 항목 (ids에는 있지만 originUids에는 없는 항목)
-        Set<String> missing = new HashSet<>(setIds);
-        missing.removeAll(setOriginUids);
+        Set<String> added = new HashSet<>(setIds);
+        added.removeAll(setOriginUids);
         String addedString;
         String missingString;
         if(!added.isEmpty()){
@@ -156,6 +161,9 @@ public class PageService {
         }
         String result = String.join(",", ids);
         page.get().putUsers(result);
+        if(!originUids.contains(page.get().getLeader())){
+            page.get().patchLeader(originUids.get(0));
+        }
         pageRepository.save(page.get());
         return ResponseEntity.ok("수정완료!");
     }
@@ -186,5 +194,111 @@ public class PageService {
             messagingTemplate.convertAndSend("/topic/page/user/"+id,message);
         }
         return ResponseEntity.ok("삭제성공!");
+    }
+
+    public ResponseEntity<?> patchRole(String pageId, String readonly) {
+        Optional<Page> page = pageRepository.findById(pageId);
+        if(page.isEmpty()){
+            return ResponseEntity.badRequest().body("페이지 정보가 일치하지 않습니다.");
+        }
+        String originReadOnly = page.get().getReadOnly();
+        List<String> origins = Arrays.asList(originReadOnly.split(","));
+        List<String> news = Arrays.asList(readonly.split(","));
+        Set<String> setIds = new HashSet<>(news);
+        Set<String> setOriginUids = new HashSet<>(origins);
+
+        Set<String> missing = new HashSet<>(setOriginUids);
+        missing.removeAll(setIds);
+
+        // 빠진 항목 (ids에는 있지만 originUids에는 없는 항목)
+        Set<String> added = new HashSet<>(setIds);
+        added.removeAll(setOriginUids);
+
+        String addedString;
+        String missingString;
+        if(!added.isEmpty()){
+            addedString = added.iterator().next();
+            String message = "{\"message\":\"" + "readonly" + "\"}";
+            messagingTemplate.convertAndSend("/topic/page/user/"+addedString, message);
+        }
+        if(!missing.isEmpty()){
+            missingString = missing.iterator().next();
+            String message = "{\"message\":\"" + "all" + "\"}";
+            messagingTemplate.convertAndSend("/topic/page/user/"+missingString, message);
+        }
+
+        page.get().patchRole(readonly);
+        pageRepository.save(page.get());
+        return ResponseEntity.ok("권한 설정 성공!");
+    }
+
+    public ResponseEntity<?> getPageRole(String pageId) {
+        Optional<Page> page = pageRepository.findById(pageId);
+        if(page.isEmpty()){
+            return ResponseEntity.badRequest().body("페이지 정보가 일치하지 않습니다.");
+        }
+        String readOnlys;
+        if(page.get().getReadOnly() != null){
+            readOnlys = page.get().getReadOnly();
+        } else {
+            readOnlys = "";
+        }
+        String users = page.get().getOwnerUid();
+        List<String> readOnly = Arrays.asList(readOnlys.split(","));
+        List<String> userUids = Arrays.asList(users.split(","));
+        List<GetPageUsersRole> roles = new ArrayList<>();
+        for (String userUid : userUids) {
+            int readonly = 0;
+            if(readOnly.contains(userUid)){
+                readonly = 1;
+            }
+            GetPageUsersRole role = GetPageUsersRole.builder()
+                    .uid(userUid)
+                    .role(readonly)
+                    .build();
+
+            roles.add(role);
+        }
+    
+        return ResponseEntity.ok(roles);
+    }
+
+    public ResponseEntity<?> postPageImage(String result, String pageId) throws IOException {
+        Optional<Page> page = pageRepository.findById(pageId);
+        if(page.isEmpty()){
+            return ResponseEntity.badRequest().body("페이지 정보가 일치하지 않습니다.");
+        }
+
+        String originContent = page.get().getContent();
+        System.out.println(originContent);
+        try {
+            // ObjectMapper를 사용하여 JSON 파싱
+            ObjectMapper objectMapper = new ObjectMapper();
+            JsonNode contentNode = objectMapper.readTree(originContent);  // JSON 문자열을 JsonNode로 변환
+
+            // blocks 배열을 가져오기
+            JsonNode blocksNode = contentNode.get("blocks");
+
+            // 새로운 이미지 객체 만들기
+            JsonNode newImageBlock = objectMapper.createObjectNode()
+                    .put("id", "imageBlockId")  // 이미지 블록의 고유 ID
+                    .put("type", "image")  // 이미지 타입
+                    .set("data", objectMapper.createObjectNode().put("file", result));  // 이미지 경로는 result로 전달된 값 사용
+
+            // blocks 배열의 끝에 새로운 이미지 블록 추가
+            ((ObjectNode) contentNode).withArray("blocks").add(newImageBlock);
+
+            // 수정된 JSON을 다시 문자열로 변환
+            String updatedContent = objectMapper.writeValueAsString(contentNode);
+
+            // 수정된 콘텐츠를 페이지에 저장하거나 반환
+            page.get().patchContent(updatedContent);
+            pageRepository.save(page.get());  // 페이지 정보 업데이트
+
+            return ResponseEntity.ok("이미지 추가 완료");
+        } catch (IOException e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).body("JSON 처리 오류");
+        }
     }
 }

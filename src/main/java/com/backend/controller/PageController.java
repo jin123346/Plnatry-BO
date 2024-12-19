@@ -1,9 +1,12 @@
 package com.backend.controller;
 
+import com.backend.document.drive.Folder;
 import com.backend.document.page.Page;
 import com.backend.dto.request.page.PageDto;
 import com.backend.dto.response.user.GetUsersAllDto;
 import com.backend.entity.folder.Permission;
+import com.backend.service.FolderService;
+import com.backend.service.SftpService;
 import com.backend.service.mongoDB.PageService;
 import com.backend.util.PermissionType;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -19,11 +22,10 @@ import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
+import java.io.IOException;
 import java.time.LocalDateTime;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @RestController
 @RequestMapping("/api")
@@ -33,6 +35,8 @@ public class PageController {
 
 
     private final PageService pageService;
+    private final FolderService folderService;
+    private final SftpService sftpService;
 
 
     @PostMapping("/page")
@@ -149,6 +153,52 @@ public class PageController {
     public ResponseEntity<?> deletePage(@PathVariable String pageId){
         ResponseEntity<?> resp = pageService.deletePage(pageId);
         return resp;
+    }
+
+    @GetMapping("/page/role/{pageId}")
+    public ResponseEntity<?> getPageRole(
+            @PathVariable String pageId
+    ){
+        ResponseEntity<?> resp = pageService.getPageRole(pageId);
+        return resp;
+    }
+
+    @PatchMapping("/page/role/{pageId}")
+    public ResponseEntity<?> patchPageRole(
+            @PathVariable String pageId,
+            @RequestParam String readonly
+    ){
+        ResponseEntity<?> resp = pageService.patchRole(pageId,readonly);
+        return resp;
+    }
+
+    @PostMapping("/page/image/{pageId}")
+    public ResponseEntity<?> postPageImage(
+            @PathVariable String pageId,
+            @RequestParam("file") MultipartFile file
+    ){
+        String remoteDir = sftpService.createPageFolder(pageId,"uploads/pages");
+        String savedFilename= folderService.generateSavedName(file.getOriginalFilename());
+        File tempFile = null;
+        try {
+            tempFile = File.createTempFile("upload_", "_" + file.getOriginalFilename());
+            file.transferTo(tempFile); // MultipartFile 데이터를 임시 파일로 저장
+
+            // SFTP 업로드
+            String result = sftpService.uploadFile(tempFile.getAbsolutePath(),remoteDir,savedFilename);
+            return ResponseEntity.ok(result);
+        } catch ( IOException e) {
+            log.error("임시 파일 생성 또는 전송 중 오류 발생: {}", e.getMessage());
+        } finally {
+            if (tempFile != null && tempFile.exists()) {
+                if (tempFile.delete()) {
+                    log.info("임시 파일 삭제 성공: {}", tempFile.getAbsolutePath());
+                } else {
+                    log.warn("임시 파일 삭제 실패: {}", tempFile.getAbsolutePath());
+                }
+            }
+        }
+        return ResponseEntity.ok().build();
     }
 
 }
