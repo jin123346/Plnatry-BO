@@ -16,7 +16,7 @@ import java.util.Map;
 allowCredentials = "true",
 allowedHeaders = "*",
 exposedHeaders = "*",
-methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.OPTIONS})  // 여기에 콤마가 없어야 하고 닫는 괄호를 바로 붙여야 합니다
+methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.OPTIONS})
 public class EmailController {
     @Autowired
     private EmailService emailService;
@@ -46,7 +46,6 @@ public class EmailController {
     public ResponseEntity<?> sendQnaEmail(@ModelAttribute @Validated QnaRequestDto request) {
         try {
             log.info("QNA 이메일 요청 수신: {}", request);
-
             // 요청 데이터 유효성 검사
             if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
                 log.warn("QNA 요청: 이메일 주소 누락");
@@ -59,7 +58,6 @@ public class EmailController {
             }
             emailService.sendQnaEmail(request);
             emailService.sendAutoReplyEmail(request.getEmail());
-
             log.info("QNA 이메일 전송 성공: {}", request.getEmail());
             return ResponseEntity.ok()
                     .body(Map.of("message", "문의가 성공적으로 전송되었습니다."));
@@ -74,7 +72,6 @@ public class EmailController {
     public ResponseEntity<?> sendCancellationEmail(@RequestBody @Validated CancellationRequestDto request) {
         try {
             log.info("취소/반품 이메일 요청 수신: {}", request);
-
             if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
                 log.warn("취소/반품 요청: 이메일 주소 누락");
                 return ResponseEntity.badRequest()
@@ -82,7 +79,6 @@ public class EmailController {
             }
             emailService.sendCancellationEmail(request);
             emailService.sendAutoReplyEmail(request.getEmail());
-
             log.info("취소/반품 이메일 전송 성공: {}", request.getEmail());
             return ResponseEntity.ok()
                     .body(Map.of("message", "문의가 성공적으로 전송되었습니다."));
@@ -97,7 +93,6 @@ public class EmailController {
     public ResponseEntity<?> sendProductServiceEmail(@RequestBody @Validated ProductServiceRequestDto request) {
         try {
             log.info("제품/서비스 이메일 요청 수신: {}", request);
-
             if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
                 log.warn("제품/서비스 요청: 이메일 주소 누락");
                 return ResponseEntity.badRequest()
@@ -105,7 +100,6 @@ public class EmailController {
             }
             emailService.sendProductServiceEmail(request);
             emailService.sendAutoReplyEmail(request.getEmail());
-
             log.info("제품/서비스 이메일 전송 성공: {}", request.getEmail());
             return ResponseEntity.ok()
                     .body(Map.of("message", "문의가 성공적으로 전송되었습니다."));
@@ -120,7 +114,6 @@ public class EmailController {
     public ResponseEntity<?> sendPaymentEmail(@RequestBody @Validated PaymentRequestDto request) {
         try {
             log.info("결제 이메일 요청 수신: {}", request);
-
             if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
                 log.warn("결제 요청: 이메일 주소 누락");
                 return ResponseEntity.badRequest()
@@ -128,7 +121,6 @@ public class EmailController {
             }
             emailService.sendPaymentEmail(request);
             emailService.sendAutoReplyEmail(request.getEmail());
-
             log.info("결제 이메일 전송 성공: {}", request.getEmail());
             return ResponseEntity.ok()
                     .body(Map.of("message", "문의가 성공적으로 전송되었습니다."));
