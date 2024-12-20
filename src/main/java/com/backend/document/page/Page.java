@@ -30,6 +30,7 @@ public class Page {
     private String ownerUid;
     private String readOnly;
     private String leader;
+    private String type; // 0 : 기본, id : 자식페이지
 
     @CreatedDate
     private LocalDateTime createAt;

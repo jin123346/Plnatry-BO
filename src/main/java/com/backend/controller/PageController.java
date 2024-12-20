@@ -2,9 +2,13 @@ package com.backend.controller;
 
 import com.backend.document.drive.Folder;
 import com.backend.document.page.Page;
+import com.backend.dto.request.page.ChatReqDto;
+import com.backend.dto.request.page.GetTitleChildDto;
 import com.backend.dto.request.page.PageDto;
+import com.backend.dto.response.page.ChatRespDto;
 import com.backend.dto.response.user.GetUsersAllDto;
 import com.backend.entity.folder.Permission;
+import com.backend.repository.page.PageRepository;
 import com.backend.service.FolderService;
 import com.backend.service.SftpService;
 import com.backend.service.mongoDB.PageService;
@@ -15,11 +19,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
@@ -37,12 +45,21 @@ public class PageController {
     private final PageService pageService;
     private final FolderService folderService;
     private final SftpService sftpService;
-
+    private final RestTemplate template;
+    private final PageRepository pageRepository;
+    private final SimpMessagingTemplate messagingTemplate;
 
     @PostMapping("/page")
     public ResponseEntity<?> postNewPage(HttpServletRequest request){
         String uid = (String)request.getAttribute("uid");
         ResponseEntity<?> resp = pageService.postNewPage(uid);
+        return resp;
+    }
+
+    @PostMapping("/page/templete")
+    public ResponseEntity<?> postNewTemplete(HttpServletRequest request){
+        String uid = (String)request.getAttribute("uid");
+        ResponseEntity<?> resp = pageService.postNewTemplete(uid);
         return resp;
     }
 
@@ -57,7 +74,8 @@ public class PageController {
     }
 
     @GetMapping("/page/view/{id}")
-    public ResponseEntity<?> view (@PathVariable String id){
+    public ResponseEntity<?> view (@PathVariable String id
+    ){
 
         log.info("요청이 들어오나?? /view"+id);
         Map<String,Object> map = new HashMap<>();
@@ -74,6 +92,16 @@ public class PageController {
         String uid = (String)request.getAttribute("uid");
 
         List<Page> pages = pageService.pageList(uid);
+
+        return ResponseEntity.ok().body(pages);
+
+    }
+
+    @GetMapping("/page/templete")
+    public ResponseEntity<?> templeteList(HttpServletRequest request){
+        String uid = (String)request.getAttribute("uid");
+
+        List<Page> pages = pageService.templeteList(uid);
 
         return ResponseEntity.ok().body(pages);
 
@@ -201,4 +229,62 @@ public class PageController {
         return ResponseEntity.ok().build();
     }
 
+    @PostMapping("/page/ai")
+    public ResponseEntity<?> getPageAi(
+            @RequestParam String text
+    ){
+        ChatReqDto request = new ChatReqDto("gpt-3.5-turbo", text);
+        ChatRespDto chatGPTResponse =  template.postForObject("https://api.openai.com/v1/chat/completions", request, ChatRespDto.class);
+
+        return ResponseEntity.ok(chatGPTResponse);
+    }
+
+    @GetMapping("/page/children")
+    public ResponseEntity<?> getPageChildren(
+            HttpServletRequest req
+    ){
+        String uid = (String) req.getAttribute("uid");
+        Page page = Page.builder()
+                .ownerUid(uid)
+                .leader(uid)
+                .createAt(LocalDateTime.now())
+                .content(null)
+                .title("하위페이지")
+                .build();
+
+        pageRepository.save(page);
+
+        return ResponseEntity.ok(page.getId());
+    }
+
+    @PostMapping("/page/children")
+    public ResponseEntity<?> postPageChildren(
+            HttpServletRequest req,
+            @RequestBody GetTitleChildDto title
+    ){
+        System.out.println(title.getSelectedTextContent());
+        String uid = (String) req.getAttribute("uid");
+        Page page = Page.builder()
+                .ownerUid(uid)
+                .leader(uid)
+                .createAt(LocalDateTime.now())
+                .content(null)
+                .title(title.getSelectedTextContent())
+                .type(title.getId())
+                .build();
+
+        pageRepository.save(page);
+
+        return ResponseEntity.ok(page.getId());
+    }
+
+    @GetMapping("/page/child")
+    public ResponseEntity<?> getPageChild(
+            HttpServletRequest req
+    ){
+        String uid = (String) req.getAttribute("uid");
+        List<Page> page = pageRepository.findAllByOwnerUidAndTypeIsNotAndTypeIsNot(uid,"0","1");
+
+        return ResponseEntity.ok(page);
+    }
 }
