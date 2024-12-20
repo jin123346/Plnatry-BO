@@ -42,13 +42,13 @@ public class CommentController {
     }
 
 
-    @PutMapping("/{postId}/{commentId}")
+    @PutMapping("/{postId}/comments/{commentId}")
     public ResponseEntity<String> updateComment(@PathVariable Long commentId, @RequestBody CommentRequestDTO requestDto) {
         commentService.updateComment(commentId, requestDto);
         return ResponseEntity.ok("댓글이 성공적으로 수정되었습니다.");
     }
 
-    @DeleteMapping("/{postId}/{commentId}")
+    @DeleteMapping("/{postId}/comments/{commentId}")
     public ResponseEntity<String> deleteComment(@PathVariable Long commentId) {
         commentService.deleteComment(commentId);
         return ResponseEntity.ok("댓글이 성공적으로 삭제되었습니다.");

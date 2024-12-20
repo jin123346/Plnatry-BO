@@ -55,6 +55,7 @@ public class CommentResponseDTO {
         this.isDeleted = comment.getIsDeleted();
         this.depth = comment.getDepth();
         this.isLiked = isLiked;
+        this.uid = comment.getUser().getUid();
 
     }
 

@@ -108,14 +108,12 @@ public class CommentService {
         comment.setContent(requestDto.getContent());
     }
 
-    // 댓글 삭제 (소프트 삭제)
     @Transactional
     public void deleteComment(Long commentId) {
         Comment comment = commentRepository.findById(commentId)
                 .orElseThrow(() -> new IllegalArgumentException("댓글이 존재하지 않습니다."));
 
-        // 논리 삭제 처리
-        comment.setIsDeleted(true);
+        commentRepository.delete(comment);
     }
 
     @Transactional
