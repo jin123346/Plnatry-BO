@@ -153,7 +153,7 @@ public class PageController {
 
     @GetMapping("/page/title/{pageId}")
     public ResponseEntity<?> getPageTitle (
-        @PathVariable String pageId
+            @PathVariable String pageId
     ){
         ResponseEntity<?> resp = pageService.getPageTitle(pageId);
         return resp;

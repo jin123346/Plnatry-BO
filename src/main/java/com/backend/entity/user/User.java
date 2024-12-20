@@ -63,12 +63,6 @@ public class User {
     @Column(name = "name")
     private String name;
 
-//    @Column(name = "first_name")
-//    private String firstName;
-//
-//    @Column(name = "last_name")
-//    private String lastName;
-
     @Column(name = "city")
     private String addr1;
 
@@ -232,7 +226,7 @@ public class User {
                 .paymentId(this.paymentId)
                 .day(this.day)
 //                .groupMappers(this.groupMappers)
-                .profileImgPath(this.profileImgPath != null ? this.profileImgPath : "uploads/profilImg/Default.png") // 기본값 설정
+                .profileImgPath(this.profileImgPath != null ? this.profileImgPath : "Default.png") // 기본값 설정
                 .profileMessage(this.profileMessage)
                 .createAt(this.createAt)
                 .lastLogin(this.lastLogin)
@@ -327,4 +321,7 @@ public class User {
     public void updatePass(String pwd) {
         this.pwd = pwd;
     }
+
+    public void updateStatus(int status) { this.status = status; }
+
 }

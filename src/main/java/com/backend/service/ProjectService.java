@@ -53,6 +53,8 @@ public class ProjectService {
     private final ProjectColumnRepository columnRepository;
     private final ProjectTaskRepository taskRepository;
     private final ProjectSubTaskRepository subTaskRepository;
+    private final ProjectAssignRepository assignRepository;
+    private final ProjectCommentRepository commentRepository;
 
 
     private final SimpMessagingTemplate messagingTemplate;
@@ -151,6 +153,10 @@ public class ProjectService {
         }
         return null;
     }
+    public List<GetProjectColumnDTO> getColumns(Long projectId) {
+        List<ProjectColumn> columnList = columnRepository.findAllByProjectId(projectId);
+        return columnList.stream().map(ProjectColumn::toGetProjectColumnDTO).collect(Collectors.toList());
+    }
 
     public ResponseEntity<?> getLeaderInfo(String group, String company) {
         Optional<Group> optGroup = groupRepository.findByNameAndStatusIsNotAndCompany(group,0,company);
@@ -189,21 +195,32 @@ public class ProjectService {
         return col.toGetProjectColumnDTO();
     }
 
-    public GetProjectTaskDTO saveTask(GetProjectTaskDTO taskDTO) {
+    public GetProjectTaskDTO addTask(GetProjectTaskDTO taskDTO) {
         log.info("saveTask 0 : " + taskDTO);
         ProjectTask task = taskDTO.toProjectTask();
         log.info("saveTask 1 : " + task);
+        task.setAssign(task.getAssign().stream().map(assignRepository::save).collect(Collectors.toList()));
         ProjectColumn col = columnRepository.findById(task.getColumn().getId())
                 .orElseThrow(() -> new RuntimeException("Column not found"));
         col.addTask(task);
-        if (task.getId() == null) {
-            task = taskRepository.save(task);  // 새 task 저장
-        }
-        entityManager.merge(col);
+        task = taskRepository.save(task);  // 새 task 저장
+        columnRepository.save(col);
 
         log.info("saveTask 2 : " + task);
         log.info("saveTask 3 : " + col);
         return task.toGetProjectTaskDTO();
+    }
+
+    public GetProjectTaskDTO updateTask(GetProjectTaskDTO taskDTO) {
+        ProjectTask task = taskDTO.toProjectTask();
+        ProjectTask originTask = taskRepository.findById(task.getId()).orElseThrow();
+        // 기존 Assign 데이터 삭제
+        assignRepository.deleteByTaskId(originTask.getId());
+
+        // Task 정보 업데이트
+        originTask.update(task);
+
+        return originTask.toGetProjectTaskDTO();
     }
 
     public void updateCoworkers(PatchCoworkersDTO dto) {
@@ -231,7 +248,7 @@ public class ProjectService {
         }
     }
     public GetProjectSubTaskDTO insertSubTask(GetProjectSubTaskDTO dto){
-        ProjectSubTask entity = ProjectSubTask.builder().name(dto.getName()).isChecked(false).build();
+        ProjectSubTask entity = dto.toEntity();
         ProjectTask task = taskRepository.findById(dto.getTaskId()).orElseThrow();
         task.addSubTask(entity);
         return entity.toDTO();
@@ -245,6 +262,7 @@ public class ProjectService {
         try {
             switch (type) {
                 case "subtask" -> subTaskRepository.deleteById(id);
+                case "comment" -> commentRepository.deleteById(id);
                 case "task" -> taskRepository.deleteById(id);
                 case "column" -> columnRepository.deleteById(id);
                 case "project" -> projectRepository.deleteById(id);
@@ -283,5 +301,19 @@ public class ProjectService {
 
         System.out.println("============================222");
         return ResponseEntity.ok("columns");
+    }
+
+    public GetProjectCommentDTO addComment(GetProjectCommentDTO dto) {
+        ProjectTask task = taskRepository.findById(dto.getTaskId()).orElseThrow();
+        log.info("addComment 0 : " + task);
+        ProjectComment comment = ProjectComment.builder()
+                .task(task)
+                .user(dto.toEntity().getUser())
+                .content(dto.getContent())
+                .build();
+        log.info("addComment 1 : " + comment);
+        ProjectComment savedComment = commentRepository.save(comment);
+        log.info("addComment 2 : " + savedComment);
+        return savedComment.toDTO();
     }
 }

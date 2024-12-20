@@ -14,6 +14,8 @@ import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Log4j2
@@ -38,10 +40,15 @@ public class ProjectController {
         return ResponseEntity.ok().body(map);
     }
 
-    @GetMapping("/project/{id}") // 프로젝트 페이지 출력
-    public ResponseEntity<?> readProject(@PathVariable Long id) {
-        GetProjectDTO dto = projectService.getProject(id);
+    @GetMapping("/project/{projectId}") // 프로젝트 페이지 출력
+    public ResponseEntity<?> getProject(@PathVariable Long projectId) {
+        GetProjectDTO dto = projectService.getProject(projectId);
         return ResponseEntity.ok().body(dto);
+    }
+    @GetMapping("/project/{projectId}/column") // 프로젝트 페이지 출력
+    public ResponseEntity<?> getColumn(@PathVariable Long projectId) {
+        List<GetProjectColumnDTO> columnList = projectService.getColumns(projectId);
+        return ResponseEntity.ok().body(columnList);
     }
 
     @DeleteMapping("/project/{id}")
@@ -80,10 +87,12 @@ public class ProjectController {
                            @Payload GetProjectTaskDTO dto) {
         GetProjectTaskDTO saved = dto;
 
-        if (type.equals("deleted")) {       // 태스크 삭제
+        if(type.equals("added")){               // 태스크 생성
+            saved = projectService.addTask(dto);
+        } else if (type.equals("updated")) {    // 태스크 수정
+            saved = projectService.updateTask(dto);
+        } else{                                 // 태스크 삭제
             projectService.delete("task", dto.getId());
-        } else {                            // 태스크 생성, 수정
-            saved = projectService.saveTask(dto);
         }
 
         projectService.sendBoardUpdate(projectId, "TASK_"+type.toUpperCase(), saved);
@@ -105,7 +114,22 @@ public class ProjectController {
 
         projectService.sendBoardUpdate(projectId, "SUBTASK_"+type.toUpperCase(),  saved);
     }
+    @MessageMapping("/project/{projectId}/comment/{type}")
+    public void comment(@DestinationVariable Long projectId,
+                        @DestinationVariable String type,
+                        @Payload GetProjectCommentDTO dto) {
+        GetProjectCommentDTO saved = dto;
 
+        if (type.equals("deleted")) {           // 댓글 삭제
+            projectService.delete("comment", dto.getId());
+        } else if (type.equals("added")) {      // 댓글 생성
+            saved = projectService.addComment(dto);
+        } else {
+            throw new IllegalArgumentException("Unsupported comment type: " + type);
+        }
+
+        projectService.sendBoardUpdate(projectId, "COMMENT_" + type.toUpperCase(), saved);
+    }
 
 
 }

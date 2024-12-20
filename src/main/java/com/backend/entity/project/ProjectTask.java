@@ -48,7 +48,7 @@ public class ProjectTask {
     private List<ProjectComment> comments = new ArrayList<>();
 
     @Setter
-    @OneToMany(cascade = CascadeType.PERSIST, orphanRemoval = true, mappedBy = "task")
+    @OneToMany(mappedBy = "task", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<ProjectAssign> assign = new ArrayList<>();
 
@@ -56,7 +56,7 @@ public class ProjectTask {
 //    private List<TaskTag> tags = new ArrayList<>();
 
     public GetProjectTaskDTO toGetProjectTaskDTO() {
-        return GetProjectTaskDTO.builder()
+        GetProjectTaskDTO task = GetProjectTaskDTO.builder()
                 .id(id)
                 .ProjectId(column.getProject().getId())
                 .columnId(column.getId())
@@ -69,6 +69,7 @@ public class ProjectTask {
                 .subTasks(subTasks.stream().map(ProjectSubTask::toDTO).collect(Collectors.toList()))
                 .assign(assign.stream().map(ProjectAssign::toDTO).collect(Collectors.toList()))
                 .build();
+        return task;
     }
 
     public void addSubTask(ProjectSubTask subtask) {
@@ -83,16 +84,19 @@ public class ProjectTask {
         comment.setTask(this);
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true; // 같은 객체 참조인 경우
-        if (o == null || getClass() != o.getClass()) return false; // 클래스가 다르거나 null이면 false
-        ProjectTask that = (ProjectTask) o;
-        return Objects.equals(id, that.id); // id가 동일한 경우 true
+    public void update(ProjectTask task) {
+        if(!this.title.equals(task.title)) this.title = task.title;
+        if(!this.content.equals(task.content)) this.content = task.content;
+        if(!this.priority.equals(task.priority)) this.priority = task.priority;
+        if(!this.duedate.equals(task.duedate))this.duedate = task.duedate;
+        // Assign 컬렉션 업데이트
+        this.assign.clear();
+        if (task.assign != null) {
+            for (ProjectAssign newAssign : task.assign) {
+                newAssign.setTask(this); // 양방향 연관관계 유지
+                this.assign.add(newAssign);
+            }
+        }
     }
 
-    @Override
-    public int hashCode() {
-        return Objects.hash(id); // id 기반의 해시코드
-    }
 }

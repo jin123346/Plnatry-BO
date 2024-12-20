@@ -1,4 +1,5 @@
 package com.backend.service;
+import com.backend.document.chat.ChatMemberDocument;
 import com.backend.dto.chat.UsersWithGroupNameDTO;
 import com.backend.dto.request.admin.user.PatchAdminUserApprovalDto;
 import com.backend.dto.request.user.*;
@@ -6,6 +7,7 @@ import com.backend.dto.response.GetAdminUsersRespDto;
 import com.backend.dto.response.UserDto;
 import com.backend.dto.response.admin.user.GetGroupUsersDto;
 import com.backend.dto.response.user.GetUsersAllDto;
+import com.backend.dto.response.user.RespCardInfoDTO;
 import com.backend.dto.response.user.TermsDTO;
 import com.backend.entity.group.Group;
 import com.backend.entity.group.GroupMapper;
@@ -13,6 +15,7 @@ import com.backend.entity.user.*;
 import com.backend.repository.GroupMapperRepository;
 import com.backend.repository.GroupRepository;
 import com.backend.repository.UserRepository;
+import com.backend.repository.chat.ChatMemberRepository;
 import com.backend.repository.user.*;
 import com.backend.util.Role;
 import jakarta.mail.Message;
@@ -60,6 +63,7 @@ public class UserService {
     private final GroupMapperRepository groupMapperRepository;
     private final TermsRepository termsRepository;
     private final CardInfoRepository cardInfoRepository;
+    private final ChatMemberRepository chatMemberRepository;
     private final JavaMailSenderImpl mailSender;
     private final PasswordEncoder passwordEncoder;
     private final RedisTemplate<String, String> redisTemplate;
@@ -236,6 +240,9 @@ public class UserService {
                                 .paymentCardExpiration(paymentInfoDTO.getPaymentCardExpiration())
                                 .paymentCardCvc(paymentInfoDTO.getPaymentCardCvc())
                                 .cardCompany(paymentInfoDTO.getCardCompany())
+                                .globalPayment(paymentInfoDTO.getGlobalPayment())
+                                .autoPayment(paymentInfoDTO.getAutoPayment())
+                                .activeStatus(paymentInfoDTO.getActiveStatus())
                                 .build();
         CardInfo cardInfo = cardInfoRepository.save(entity);
         return cardInfo;
@@ -461,6 +468,12 @@ public class UserService {
             user.updateProfileImg(savedFilename);
             userRepository.save(user);
 
+            // 12.19 채팅용 유저에 프로필 이미지 경로 저장
+            ChatMemberDocument chatMemberDocument = chatMemberRepository.findByUid(user.getUid());
+            chatMemberDocument.setProfileUrl(path);
+            chatMemberDocument.setProfileSName(savedFilename);
+            chatMemberRepository.save(chatMemberDocument);
+
             log.info("프로필 업로드 및 저장 완료: {}", profileImg);
             return true;
         } catch (Exception e) {
@@ -558,6 +571,60 @@ public class UserService {
             String encodedPwd = passwordEncoder.encode(pwd);
             log.info("인코딩 패스워드 "+encodedPwd);
             user.updatePass(encodedPwd);
+            userRepository.save(user);
+            return ResponseEntity.ok().build();
+        }
+    }
+
+    public ResponseEntity<?> getCardInfo(Long userId) {
+        List<CardInfo> cardInfos = cardInfoRepository.findAllByUserId(userId);
+        if(cardInfos.isEmpty()){
+            return ResponseEntity.ok().body("카드 정보가 없습니다.");
+        }
+        List<RespCardInfoDTO> dtos = cardInfos.stream().map( v -> {
+            RespCardInfoDTO dto = v.toDto();
+            return dto;
+        }).toList();
+        return ResponseEntity.ok().body(dtos);
+    }
+
+    public ResponseEntity<?> deletePayment(Long paymentId) {
+        try {
+            cardInfoRepository.deleteById(paymentId);
+            return ResponseEntity.ok().build();
+        }catch (Exception e){
+            return ResponseEntity.status(HttpStatus.CONFLICT).body("결제정보 삭제 중 오류가 발생했습니다.");
+        }
+    }
+
+    public ResponseEntity addPayment(PaymentInfoDTO paymentInfoDTO, Long userId) {
+        CardInfo entity = CardInfo.builder()
+                .activeStatus(paymentInfoDTO.getActiveStatus())
+                .paymentCardNo(paymentInfoDTO.getPaymentCardNo())
+                .paymentCardNick(paymentInfoDTO.getPaymentCardNick())
+                .paymentCardExpiration(paymentInfoDTO.getPaymentCardExpiration())
+                .paymentCardCvc(paymentInfoDTO.getPaymentCardCvc())
+                .cardCompany(paymentInfoDTO.getCardCompany())
+                .globalPayment(paymentInfoDTO.getGlobalPayment())
+                .autoPayment(paymentInfoDTO.getAutoPayment())
+                .activeStatus(paymentInfoDTO.getActiveStatus())
+                .userId(userId)
+                .build();
+        CardInfo cardInfo = cardInfoRepository.save(entity);
+        if(cardInfo != null) {
+            return ResponseEntity.ok().body("저장 성공");
+        }else{
+            return ResponseEntity.status(HttpStatus.CONFLICT).build();
+        }
+    }
+
+    public ResponseEntity<?> deleteAccount(Long userId) {
+        Optional<User> optUser = userRepository.findById(userId);
+        if(optUser.isEmpty()){
+            return ResponseEntity.notFound().build();
+        }else{
+            User user = optUser.get();
+            user.updateStatus(0);
             userRepository.save(user);
             return ResponseEntity.ok().build();
         }
