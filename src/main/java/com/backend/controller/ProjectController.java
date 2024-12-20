@@ -48,9 +48,7 @@ public class ProjectController {
     @GetMapping("/project/{projectId}/column") // 프로젝트 페이지 출력
     public ResponseEntity<?> getColumn(@PathVariable Long projectId) {
         List<GetProjectColumnDTO> columnList = projectService.getColumns(projectId);
-        Map<String,Object> result = new HashMap<>();
-        result.put("columns", columnList);
-        return ResponseEntity.ok().body(result);
+        return ResponseEntity.ok().body(columnList);
     }
 
     @DeleteMapping("/project/{id}")
