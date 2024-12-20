@@ -36,6 +36,7 @@ public class PageService {
     public Page save(PageDto page) {
 
         Page pages  = page.ToEntity();
+
         Page savedpage =  pageRepository.save(pages);
         log.info(savedpage);
         return savedpage;
@@ -59,7 +60,7 @@ public class PageService {
     }
 
     public List<Page> pageList(String uid){
-        List<Page> list = pageRepository.findByOwnerUidContaining(uid);
+        List<Page> list = pageRepository.findByOwnerUidContainingAndType(uid,"0");
         return list;
     }
 
@@ -175,6 +176,7 @@ public class PageService {
                 .title("제목없음")
                 .createAt(LocalDateTime.now())
                 .leader(uid)
+                .type("0")
                 .build();
         pageRepository.save(page);
 
@@ -259,7 +261,7 @@ public class PageService {
 
             roles.add(role);
         }
-    
+
         return ResponseEntity.ok(roles);
     }
 
@@ -300,5 +302,24 @@ public class PageService {
             e.printStackTrace();
             return ResponseEntity.status(500).body("JSON 처리 오류");
         }
+    }
+
+    public ResponseEntity<?> postNewTemplete(String uid) {
+        Page page = Page.builder()
+                .ownerUid(uid)
+                .content(null)
+                .title("새로운 템플릿")
+                .createAt(LocalDateTime.now())
+                .leader(uid)
+                .type("1")
+                .build();
+        pageRepository.save(page);
+
+        return ResponseEntity.ok(page.getId());
+    }
+
+    public List<Page> templeteList(String uid) {
+        List<Page> list = pageRepository.findByOwnerUidContainingAndType(uid,"1");
+        return list;
     }
 }

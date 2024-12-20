@@ -102,3 +102,7 @@ token:
         issuer: "sanghun1101088@@!!##"
 admin:
     email: your-email@example.com
+
+openai:
+    api:
+        key: ${OPENAI_API_KEY}
