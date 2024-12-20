@@ -27,6 +27,7 @@ public class PageDto {
     private LocalDateTime createAt;
     private LocalDateTime updateAt;
     private String permissions;
+    private int type;
 
 
     public Page ToEntity() {
