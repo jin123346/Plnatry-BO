@@ -17,7 +17,7 @@ public interface FolderMogoRepository extends MongoRepository<Folder, String>   
     List<Folder> findByParentIdAndStatusIsNotOrderByOrder( String parentId , int status);
     Optional<Folder> findByParentId(String parentId);
     Folder findByName(String name);
-
+    Optional<Folder> findByPath(String path);
 
     Optional<Folder> findByTypeAndOwnerId(String type, String ownerId);
 

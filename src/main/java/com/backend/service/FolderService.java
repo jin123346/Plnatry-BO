@@ -25,6 +25,8 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
+
+import javax.swing.text.html.Option;
 import java.io.File;
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -617,6 +619,201 @@ public class FolderService {
         for (Folder childFolder : childFolders) {
             updateAllChildren(childFolder.getId());
         }
+    }
+    private String getUserRootPath(String userId) {
+        return "uploads/" + userId;
+    }
+    // Example restore logic handling this scenario
+    @Transactional
+    public boolean restoreFolder(String folderId) {
+        log.info("[START] 폴더 복구 시작: folderId={}", folderId);
+
+        // 복구할 폴더 조회
+        Folder folder = folderMogoRepository.findById(folderId)
+                .orElseThrow(() -> new IllegalArgumentException("Folder not found with ID: " + folderId));
+        log.info("복구 대상 폴더 조회 완료: {}", folder);
+
+        // 사용자 ROOT 폴더 경로 확인
+
+        String userRootPath = getUserRootPath(folder.getOwnerId());
+        log.info("사용자 ROOT 폴더 경로: {}", userRootPath);
+
+        Folder rootFolder = folderMogoRepository.findByPath(userRootPath)
+                .orElseThrow(() -> new IllegalArgumentException("Root folder not found"));
+        log.info("ROOT 폴더 조회 완료: {}", rootFolder);
+
+        String restoredPath = restoreParentFolders(folder.getParentId(), rootFolder);
+        log.info("복구된 상위 폴더 경로: {}", restoredPath);
+
+        // SFTP 복구 호출
+        boolean sftpRestoreSuccess = sftpService.restoreMoveFolder(folder.getPath(), restoredPath);
+        if (!sftpRestoreSuccess) {
+            log.error("SFTP 폴더 복구 실패: oldPath={} newPath={}", folder.getPath(), restoredPath);
+            return false;
+        }
+        log.info("SFTP 폴더 복구 성공: oldPath={} newPath={}", folder.getPath(), restoredPath);
+
+        // 새로운 parentId 설정 (복구된 상위 폴더 ID)
+        String newParentFolderId = folderMogoRepository.findByPath(restoredPath)
+                .orElseThrow(() -> new IllegalArgumentException("Restored parent folder not found"))
+                .getId();
+        log.info("복구된 상위 폴더 ID: {}", newParentFolderId);
+
+        // MongoDB 업데이트
+        Query query = new Query(Criteria.where("_id").is(folderId));
+        Update update = new Update()
+                .set("status", 1)
+                .set("parentId", newParentFolderId)
+                .set("path", restoredPath + "/" + folder.getFolderUUID())
+                .set("restore", 1)
+                .set("updatedAt", new Date());
+        mongoTemplate.upsert(query, update, Folder.class);
+        log.info("MongoDB 폴더 업데이트 완료: folderId={}", folderId);
+
+        // 하위 파일들의 folderId와 path 업데이트
+        folder.setPath(restoredPath + "/" + folder.getFolderUUID());
+        boolean updateFile = updateFilePaths(folder);
+        log.info("하위 파일 경로 업데이트 결과: {}", updateFile);
+
+        boolean updateChildrenFolder = restoreChildFolders(folder);
+        log.info("하위 폴더 복구 결과: {}", updateChildrenFolder);
+
+        if (updateFile && updateChildrenFolder) {
+            log.info("[END] 폴더 복구 완료: folderId={}", folderId);
+            return true;
+        } else {
+            log.warn("[END] 폴더 복구 실패: folderId={}", folderId);
+            return false;
+        }
+    }
+
+    @Transactional
+    public String restoreParentFolders(String parentId, Folder rootFolder) {
+        log.info("[START] 상위 폴더 복구: parentId={}", parentId);
+        if (parentId.equals(rootFolder.getId())) {
+            log.info("ROOT 폴더 경로 반환: {}", rootFolder.getPath());
+            return rootFolder.getPath(); // ROOT 폴더 경로 반환
+        }
+
+        // 상위 폴더 조회
+        Folder parentFolder = folderMogoRepository.findById(parentId)
+                .orElseThrow(() -> new IllegalArgumentException("Deleted parent folder not found: " + parentId));
+        log.info("상위 폴더 조회 완료: {}", parentFolder);
+
+        if (parentFolder.getStatus() == 0) {
+            log.info("상위 폴더가 삭제된 상태. 복구를 진행합니다.");
+
+            // 부모 폴더 복구
+            String parentRestoredPath = restoreParentFolders(parentFolder.getParentId(), rootFolder);
+            String newFolderUUID = UUID.randomUUID().toString();
+            log.info("새로운 폴더 UUID 생성: {}", newFolderUUID);
+
+            // 상위 폴더 SFTP 생성
+            String newParentPath = parentRestoredPath + "/" + newFolderUUID;
+            log.info("상위 폴더 SFTP 생성 경로: {}", newParentPath);
+            boolean parentFolderCreated = sftpService.RestoreCreateFolder(newParentPath);
+            if (!parentFolderCreated) {
+                log.error("SFTP 상위 폴더 생성 실패: path={}", newParentPath);
+                throw new RuntimeException("SFTP 상위 폴더 생성 실패: path=" + newParentPath);
+            }
+
+            // MongoDB에 상위 폴더 추가
+            Folder restoredParentFolder = Folder.builder()
+                    .parentId(parentFolder.getParentId())
+                    .folderUUID(newFolderUUID)
+                    .description(parentFolder.getDescription())
+                    .invitations(parentFolder.getInvitations())
+                    .name(parentFolder.getName())
+                    .path(newParentPath)
+                    .ownerId(parentFolder.getOwnerId())
+                    .type(parentFolder.getType())
+                    .order(parentFolder.getOrder())
+                    .createdAt(LocalDateTime.now())
+                    .updatedAt(LocalDateTime.now())
+                    .isPinned(parentFolder.getIsPinned())
+                    .isShared(parentFolder.getIsShared())
+                    .sharedDepts(parentFolder.getSharedDepts())
+                    .sharedUsers(parentFolder.getSharedUsers())
+                    .linkSharing(parentFolder.getLinkSharing())
+                    .status(1) // 활성화 상태
+                    .restore(1) // 복구 플래그
+                    .build();
+
+            folderMogoRepository.save(restoredParentFolder);
+            log.info("상위 폴더 MongoDB 복구 완료: {}", restoredParentFolder);
+
+            return newParentPath;
+        }else {
+
+            return  parentFolder.getPath();
+        }
+
+    }
+
+    @Transactional
+    public boolean updateFilePaths(Folder folder) {
+        log.info("[START] 하위 파일 경로 업데이트: folderId={}", folder.getId());
+        List<FileMogo> files = fileMogoRepository.findAllByFolderId(folder.getId());
+        log.info("폴더 내 파일 개수: {}", files.size());
+        String newFolderPath = folder.getPath();
+
+        int size = files.size();
+        int result = 0;
+
+        for (FileMogo file : files) {
+            String newFilePath = newFolderPath + "/" + file.getSavedName();
+            log.info("파일 경로 업데이트: oldPath={}, newPath={}", file.getPath(), newFilePath);
+
+            Query query = new Query(Criteria.where("_id").is(file.getId()));
+            Update update = new Update()
+                    .set("path", newFilePath)
+                    .set("updatedAt", new Date());
+            mongoTemplate.upsert(query, update, FileMogo.class);
+
+            result++;
+        }
+
+        log.info("[END] 파일 경로 업데이트 완료. 성공/전체: {}/{}", result, size);
+        return result == size;
+    }
+
+    @Transactional
+    public boolean restoreChildFolders(Folder parentFolder) {
+        log.info("[START] 하위 폴더 복구: parentFolderId={}", parentFolder.getId());
+        List<Folder> childFolders = folderMogoRepository.findAllByParentId(parentFolder.getId());
+        log.info("하위 폴더 개수: {}", childFolders.size());
+
+        String parentFolderPath = parentFolder.getPath();
+        int size = childFolders.size();
+        int result = 0;
+
+        for (Folder childFolder : childFolders) {
+            String newFolderPath = parentFolderPath + "/" + childFolder.getFolderUUID();
+            log.info("하위 폴더 경로 업데이트: {}", newFolderPath);
+
+            Query query = new Query(Criteria.where("_id").is(childFolder.getId()));
+            Update update = new Update()
+                    .set("parentId",parentFolder.getId())
+                    .set("status", 1)
+                    .set("path", newFolderPath)
+                    .set("updatedAt", new Date());
+            mongoTemplate.upsert(query, update, Folder.class);
+
+            // 재귀적으로 하위 폴더 복구
+            boolean childFolderResult = restoreChildFolders(childFolder);
+
+            // 하위 폴더에 속한 파일 경로 업데이트
+            boolean fileResult = updateFilePaths(childFolder);
+            log.info("하위 폴더 복구 결과: childFolderId={}, childFolderResult={}, fileResult={}",
+                    childFolder.getId(), childFolderResult, fileResult);
+
+            if (fileResult && childFolderResult) {
+                result++;
+            }
+        }
+
+        log.info("[END] 하위 폴더 복구 완료. 성공/전체: {}/{}", result, size);
+        return result == size;
     }
 
 

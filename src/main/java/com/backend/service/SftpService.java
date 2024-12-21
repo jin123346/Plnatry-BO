@@ -14,6 +14,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Log4j2
 @Service
@@ -127,6 +128,72 @@ public class SftpService {
         } catch (Exception e) {
             log.error("Error while creating folder: {}", e.getMessage());
             return null;
+        }
+    }
+
+
+    public boolean RestoreCreateFolder(String path) {
+        try {
+            JSch jsch = new JSch();
+            Session session = jsch.getSession(SFTP_USER, SFTP_HOST, SFTP_PORT);
+            session.setPassword(SFTP_PASSWORD);
+            session.setConfig("StrictHostKeyChecking", "no");
+            session.connect();
+
+            log.info("복구 경로 생성 시작: {}", path);
+            ChannelExec channelExec = (ChannelExec) session.openChannel("exec");
+            String command = String.format(
+                    "mkdir -p %s ",path
+
+            );
+            channelExec.setCommand(command);
+            channelExec.connect();
+
+            channelExec.disconnect();
+            session.disconnect();
+            return true;
+        } catch (Exception e) {
+            log.error("폴더 생성 실패: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    public boolean restoreMoveFolder(String sourcePath, String destinationPath) {
+        try {
+            JSch jsch = new JSch();
+            Session session = jsch.getSession(SFTP_USER, SFTP_HOST, SFTP_PORT);
+            session.setPassword(SFTP_PASSWORD);
+            session.setConfig("StrictHostKeyChecking", "no");
+            session.connect();
+
+            ChannelExec channelExec = (ChannelExec) session.openChannel("exec");
+            String command = String.format(
+                    "[ -d %s ] && mkdir -p %s && cp -r %s/* %s || echo 'SOURCE_NOT_FOUND'",
+                    sourcePath, destinationPath, sourcePath, destinationPath
+            );
+            log.info("command!!!!"+command);
+            channelExec.setCommand(command);
+            InputStream inputStream = channelExec.getInputStream();
+
+            channelExec.connect();
+
+            String result = new BufferedReader(new InputStreamReader(inputStream))
+                    .lines()
+                    .collect(Collectors.joining("\n"));
+
+            channelExec.disconnect();
+            session.disconnect();
+
+            if (result.contains("SOURCE_NOT_FOUND")) {
+                log.error("Source folder not found: {}", sourcePath);
+                return false;
+            }
+
+            log.info("Successfully restored folder from {} to {}", sourcePath, destinationPath);
+            return true;
+        } catch (JSchException | IOException e) {
+            log.error("Failed to restore folder: {}", e.getMessage());
+            return false;
         }
     }
 
@@ -386,6 +453,52 @@ public class SftpService {
         }
 
     }
+
+    public boolean restoreFolder(String oldPath,String newPath){
+        try {
+            // SFTP 연결 설정
+            JSch jsch = new JSch();
+            Session session = jsch.getSession(SFTP_USER, SFTP_HOST, SFTP_PORT);
+            session.setPassword(SFTP_PASSWORD);
+            session.setConfig("StrictHostKeyChecking", "no");
+            session.connect();
+
+            ChannelExec channelExec = (ChannelExec) session.openChannel("exec");
+            // 명령어 생성
+            // 명령어 생성: mkdir && cp
+            String command = String.format(
+                    "mkdir -p %s && [ -d %s ] && cp -r %s/* %s || echo 'SOURCE_NOT_FOUND'",
+                    newPath, oldPath, oldPath, newPath
+            );
+            channelExec.setCommand(command);
+            InputStream inputStream = channelExec.getInputStream();
+
+            channelExec.connect();
+
+            String result = new BufferedReader(new InputStreamReader(inputStream))
+                    .lines()
+                    .collect(Collectors.joining("\n"));
+
+            // 결과 확인 및 오류 처리
+            if (result.contains("SOURCE_NOT_FOUND")) {
+                log.error("복구 실패: 소스 폴더가 존재하지 않습니다.");
+                return false;
+            }
+
+            log.info("폴더와 하위 파일이 모두 복구되었습니다.");
+
+            channelExec.disconnect();
+            session.disconnect();
+            return true;
+
+        } catch (JSchException | IOException e) {
+            log.error("폴더 복구 실패: " + e.getMessage());
+            return false;
+
+        }
+
+    }
+
 
     public boolean thumbnailDelete(String savedName){
         String path = BASE_SFTP_DIR+"thumbnails/"+savedName+".jpg";

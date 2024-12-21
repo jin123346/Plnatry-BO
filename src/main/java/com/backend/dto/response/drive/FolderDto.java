@@ -43,6 +43,8 @@ public class FolderDto {
     private String sharedDept;
     private String parentPath;
     private int target;
+    private int restore;
+
 
 
     private List<ShareDept> shareDepts = new ArrayList<>();
