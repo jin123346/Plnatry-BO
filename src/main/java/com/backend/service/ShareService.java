@@ -24,6 +24,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -66,15 +67,17 @@ public class ShareService {
                     savedUser.add(sharedUser1);
                 }
 
-
-
-
                 List<SharedUser> existingSharedUsers = folder.getSharedUsers();
-                Set<SharedUser> uniqueSharedUsers = new HashSet<>(existingSharedUsers);
-                uniqueSharedUsers.addAll(savedUser); // 새로운 사용자 추가
-                List<SharedUser> finalSharedUsers = new ArrayList<>(uniqueSharedUsers);
+                Map<Long, SharedUser> userMap = new LinkedHashMap<>();
+                for (SharedUser user : existingSharedUsers) {
+                    userMap.put(user.getId(), user);
+                }
+                for (SharedUser user : savedUser) {
+                    userMap.put(user.getId(), user);
+                }
+                List<SharedUser> finalSharedUsers = new ArrayList<>(userMap.values());
+                folder.setSharedUsers(finalSharedUsers);;
 
-                folder.setSharedUsers(finalSharedUsers);
                 folderMogoRepository.save(folder);
 
                 return true;
@@ -138,11 +141,18 @@ public class ShareService {
                 Folder folder = folderMogoRepository.findById(id)
                         .orElseThrow(() -> new IllegalArgumentException("Invalid Folder ID or Type"));
 
-                List<SharedUser> existingSharedUsers = folder.getSharedUsers();
-                Set<SharedUser> uniqueSharedUsers = new HashSet<>(existingSharedUsers);
-                uniqueSharedUsers.addAll(savedUser); // 새로운 사용자 추가
-                List<SharedUser> finalSharedUsers = new ArrayList<>(uniqueSharedUsers);
+                Map<Long, SharedUser> userMap = new LinkedHashMap<>();
 
+                for (SharedUser user : folder.getSharedUsers()) {
+                    userMap.put(user.getId(), user);
+                }
+
+                for (SharedUser user : savedUser) {
+                    userMap.put(user.getId(), user);
+                }
+
+                List<SharedUser> finalSharedUsers = new ArrayList<>(userMap.values());
+                folder.setSharedUsers(finalSharedUsers);
 
 
                 Query query = new Query(Criteria.where("_id").is(id));
@@ -212,18 +222,21 @@ public class ShareService {
         if(type.equals("folder")){
             Folder folder = folderMogoRepository.findById(id)
                     .orElseThrow(() -> new IllegalArgumentException("Invalid Folder ID or Type"));
+            List<SharedUser> combinedUsers = new ArrayList<>();
+            combinedUsers.addAll(folder.getSharedUsers());
+            combinedUsers.addAll(sharedUserList);
 
-            List<SharedUser> existingSharedUsers = folder.getSharedUsers();
-            Set<SharedUser> uniqueSharedUsers = new HashSet<>(existingSharedUsers);
-            uniqueSharedUsers.addAll(sharedUserList); // 새로운 사용자 추가
-            List<SharedUser> finalSharedUsers = new ArrayList<>(uniqueSharedUsers);
+            List<SharedUser> finalSharedUsers  = combinedUsers.stream()
+                    .distinct()
+                    .collect(Collectors.toList());
+
+            folder.setSharedUsers(finalSharedUsers );
 
 
             Query query = new Query(Criteria.where("_id").is(id));
             Update update = new Update()
                     .set("sharedDepts", sharedDeptList)
-                    .set("sharedUsers", finalSharedUsers) // 병합된 사용자 리스트 설정
-                    .set("target", "target");
+                    .set("sharedUsers", finalSharedUsers); // 병합된 사용자 리스트 설정
             mongoTemplate.upsert(query, update, Folder.class);
 
             propagatePermissions(folder.getPath(),finalSharedUsers,sharedDeptList,folder.getInvitations(),1);
@@ -259,8 +272,6 @@ public class ShareService {
                 for(GroupMapper gm : groupMappers){
                     usersToRemove.add(gm.getUser());
                 }
-
-
                 sharedDepts.removeIf(sharedDept -> sharedDept.getDeptId().equals(deptId));
                 folder.setSharedDepts(sharedDepts);
 
