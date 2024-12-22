@@ -50,6 +50,7 @@ public class Folder {
     @Builder.Default
     private String sharedDept = "[]";
 
+    private String sharedToken;
 
 
     @Setter
@@ -97,6 +98,7 @@ public class Folder {
                 .invitations(this.invitations)
                 .target(this.target)
                 .restore(this.restore)
+                .sharedToken(this.sharedToken)
                 .build();
     }
 
@@ -116,6 +118,7 @@ public class Folder {
 
     public void updatedTime(){this.updatedAt = LocalDateTime.now();}
     public void updateParentId(String parentId){this.parentId = parentId;}
+    public void updateShareToken(String sharedToken){this.sharedToken = sharedToken;}
 
 }
 

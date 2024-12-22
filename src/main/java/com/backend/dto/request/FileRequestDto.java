@@ -28,6 +28,7 @@ public class FileRequestDto {
     private int isPinned; // 1: 고정 폴더
     private LocalDateTime createdAt; // 파일 생성 날짜 및 시간
     private LocalDateTime updatedAt; // 파일 수정 날짜 및 시간
+    private String sharedToken;
 
     private String thumbnailPath;
     public FileMogo toEntity(){
@@ -45,6 +46,7 @@ public class FileRequestDto {
                 .updatedAt(updatedAt)
                 .size(size)
                 .folderId(folderId)
+                .sharedToken(sharedToken)
                 .build();
         return fileMogo;
     }

@@ -1,6 +1,8 @@
 package com.backend.controller;
 
+import com.backend.document.drive.ShareLink;
 import com.backend.dto.request.drive.RemoveDepartmentRequestDto;
+import com.backend.dto.request.drive.ShareLinkRequest;
 import com.backend.dto.request.drive.ShareRequestDto;
 import com.backend.service.ShareService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -8,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Collections;
@@ -36,6 +39,39 @@ public class ShareController {
         }
     }
 
+    @PostMapping("/share/link")
+    public ResponseEntity<?> createShareLink(@RequestBody ShareLinkRequest sharedRequest, HttpServletRequest request) {
+        String permission = "읽기";
+        String uid = (String) request.getAttribute("uid");
+        log.info("Request received with id: {}, body: {}", sharedRequest.getId(),uid);
+
+        if(sharedRequest.getOwnerId().equals(uid)){
+            ShareLink shared = shareService.generateToken(sharedRequest.getId(),uid);
+
+            if(shared != null) {
+                String linkToken = shared.getToken();
+                return ResponseEntity.ok(Map.of("shareToken", linkToken));
+            }else{
+                return ResponseEntity.status(HttpStatus.EXPECTATION_FAILED).body("공유 중 에러가 발생했습니다.");
+            }
+
+        }else{
+            return ResponseEntity.status(HttpStatus.EXPECTATION_FAILED).body("공유 권한이 없습니다.");
+        }
+
+    }
+
+    @PostMapping("/share/token/validate")
+    public ResponseEntity<?> validateToken(@RequestBody Map<String, String> request) {
+        String token = request.get("token");
+        boolean isValid = shareService.validateToken(token);
+
+        if (isValid) {
+            return ResponseEntity.ok("Token is valid");
+        } else {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid token");
+        }
+    }
 
 
 

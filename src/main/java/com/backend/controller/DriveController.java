@@ -542,11 +542,12 @@ public class DriveController {
 
     //폴더 복구,
     @DeleteMapping("/{type}/restore/{id}")
-    public ResponseEntity restore(@PathVariable String type,@PathVariable String id){
+    public ResponseEntity restore(@PathVariable String type,@PathVariable String id,HttpServletRequest request){
         log.info("복구 로직 시작"+type+"Id "+id);
         boolean result = false;
+        String uid = (String)request.getAttribute("uid");
         if(type.equals("folder")){
-            result=folderService.restoreFolder(id);
+            result=folderService.restoreFolder(id,uid);
         }else{
             result = folderService.restore( type,id);
 

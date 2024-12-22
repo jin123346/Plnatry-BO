@@ -168,7 +168,7 @@ public class SftpService {
 
             ChannelExec channelExec = (ChannelExec) session.openChannel("exec");
             String command = String.format(
-                    "[ -d %s ] && mkdir -p %s && cp -r %s/* %s || echo 'SOURCE_NOT_FOUND'",
+                    "[ -d %s ] && mkdir -p %s && cp -r %s %s || echo 'SOURCE_NOT_FOUND'",
                     sourcePath, destinationPath, sourcePath, destinationPath
             );
             log.info("command!!!!"+command);
@@ -196,7 +196,6 @@ public class SftpService {
             return false;
         }
     }
-
 
 
   //사용자 생성시 root 폴더 생성 (폴더이름 -> username)
@@ -454,9 +453,9 @@ public class SftpService {
 
     }
 
-    public boolean restoreFolder(String oldPath,String newPath){
+    public boolean copyFolderContents(String sourcePath, String targetPath) {
+        log.info("[START] SFTP 폴더 내용 복사: source={}, target={}", sourcePath, targetPath);
         try {
-            // SFTP 연결 설정
             JSch jsch = new JSch();
             Session session = jsch.getSession(SFTP_USER, SFTP_HOST, SFTP_PORT);
             session.setPassword(SFTP_PASSWORD);
@@ -464,39 +463,36 @@ public class SftpService {
             session.connect();
 
             ChannelExec channelExec = (ChannelExec) session.openChannel("exec");
-            // 명령어 생성
-            // 명령어 생성: mkdir && cp
-            String command = String.format(
-                    "mkdir -p %s && [ -d %s ] && cp -r %s/* %s || echo 'SOURCE_NOT_FOUND'",
-                    newPath, oldPath, oldPath, newPath
-            );
-            channelExec.setCommand(command);
-            InputStream inputStream = channelExec.getInputStream();
 
+            // 안전한 덮어쓰기 명령 생성
+            String command = String.format(
+                    "mkdir -p %s && cp -rf %s/* %s || echo 'COPY_FAILED'",
+                    targetPath, sourcePath, targetPath
+            );
+            log.info("SFTP 명령 실행: {}", command);
+            channelExec.setCommand(command);
+
+            InputStream inputStream = channelExec.getInputStream();
             channelExec.connect();
 
             String result = new BufferedReader(new InputStreamReader(inputStream))
                     .lines()
                     .collect(Collectors.joining("\n"));
 
-            // 결과 확인 및 오류 처리
-            if (result.contains("SOURCE_NOT_FOUND")) {
-                log.error("복구 실패: 소스 폴더가 존재하지 않습니다.");
+            channelExec.disconnect();
+            session.disconnect();
+
+            if (result.contains("COPY_FAILED")) {
+                log.error("SFTP 폴더 내용 복사 실패: source={}, target={}", sourcePath, targetPath);
                 return false;
             }
 
-            log.info("폴더와 하위 파일이 모두 복구되었습니다.");
-
-            channelExec.disconnect();
-            session.disconnect();
+            log.info("[END] SFTP 폴더 내용 복사 완료: source={}, target={}", sourcePath, targetPath);
             return true;
-
-        } catch (JSchException | IOException e) {
-            log.error("폴더 복구 실패: " + e.getMessage());
+        } catch (Exception e) {
+            log.error("SFTP 폴더 내용 복사 중 오류 발생: {}", e.getMessage(), e);
             return false;
-
         }
-
     }
 
 
