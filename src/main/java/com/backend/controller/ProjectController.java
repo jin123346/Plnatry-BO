@@ -107,7 +107,7 @@ public class ProjectController {
         if(type.equals("added")){               // 서브태스크 생성
             saved = projectService.insertSubTask(dto);
         } else if (type.equals("updated")) {    //서브태스크 수정
-            projectService.clickSubTask(dto.getId());
+            saved = projectService.clickSubTask(dto.getId());
         } else{                                 // 서브태스크 삭제
             projectService.delete("subtask", dto.getId());
         }

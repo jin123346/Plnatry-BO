@@ -88,7 +88,7 @@ public class ProjectTask {
         if(!this.title.equals(task.title)) this.title = task.title;
         if(!this.content.equals(task.content)) this.content = task.content;
         if(!this.priority.equals(task.priority)) this.priority = task.priority;
-        if(!this.duedate.equals(task.duedate))this.duedate = task.duedate;
+        this.duedate = task.duedate;
         // Assign 컬렉션 업데이트
         this.assign.clear();
         if (task.assign != null) {
