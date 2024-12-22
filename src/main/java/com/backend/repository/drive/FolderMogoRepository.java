@@ -29,6 +29,8 @@ public interface FolderMogoRepository extends MongoRepository<Folder, String>   
 
     List<Folder> findAllByParentId(String parentId);
 
+    Folder findFolderByNameAndParentIdAndRestore(String name , String parentId , int restore);
+
     Folder findFolderByNameAndParentIdAndStatusIsNot(String name, String parentId,int status);
 
     List<Folder> findBySharedUsersUidAndTarget(String userId,int target);
@@ -36,4 +38,7 @@ public interface FolderMogoRepository extends MongoRepository<Folder, String>   
     List<Folder> findBySharedUsersUid(String uid);
 
     Optional<Folder> findByIdAndSharedUsersUid(String folderId,String uid);
+
+    List<Folder> findAllByPathStartingWith(String path);
+    Optional<Folder> findByNameAndParentIdAndRestore(String name , String parentId, int restore);
 }

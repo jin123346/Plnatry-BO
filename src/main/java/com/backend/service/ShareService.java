@@ -4,6 +4,7 @@ package com.backend.service;
 import com.backend.document.drive.FileMogo;
 import com.backend.document.drive.Folder;
 import com.backend.document.drive.Invitation;
+import com.backend.document.drive.ShareLink;
 import com.backend.dto.request.drive.*;
 import com.backend.entity.group.GroupMapper;
 import com.backend.entity.user.User;
@@ -12,10 +13,12 @@ import com.backend.repository.UserRepository;
 import com.backend.repository.drive.FileMogoRepository;
 import com.backend.repository.drive.FolderMogoRepository;
 import com.backend.repository.drive.InvitationRepository;
+import com.backend.repository.drive.ShareLinkRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.apache.poi.hpsf.GUID;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -41,6 +44,8 @@ public class ShareService {
     private final UserRepository userRepository;
     private final InvitationRepository invitationRepository;
     private final EmailService emailService;
+    private final ShareLinkRepository shareLinkRepository;
+    private final FolderService folderService;
 
     //department
     public boolean shareUser(ShareRequestDto shareRequestDto,String type,String id ) {
@@ -412,5 +417,114 @@ public class ShareService {
     private boolean checkIfAlreadyShared(String sharedId, String uid) {
         // 공유된 사용자 목록 조회 및 검증
         return  folderMogoRepository.findByIdAndSharedUsersUid(sharedId, uid).isPresent();
+    }
+
+
+    public ShareLink generateToken(String sharedId, String uid) {
+        String token = UUID.randomUUID().toString(); // 고유 토큰 생성
+
+
+        ShareLink shareLink = ShareLink.builder()
+                .shared_By(uid)
+                .token(token)
+                .createAt(LocalDateTime.now())
+                .expiry_date(LocalDateTime.now().plusDays(7))
+                .sharedId(sharedId)
+                .permission("읽기")
+                .is_active(true)
+                .build();
+
+        ShareLink savedLink = shareLinkRepository.save(shareLink); // 7일 유효
+
+        boolean result = updateSharedLink(savedLink,sharedId);
+        if (result){
+            return savedLink;
+        }else{
+            return null;
+        }
+
+    }
+    public boolean updateSharedLink(ShareLink shareLink,String id){
+        Folder rootFolder = folderMogoRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Folder not found: " + id));
+
+
+        Query query = new Query(Criteria.where("_id").is(id));
+        Update update = new Update()
+                .set("isShared", 1)
+                .set("sharedToken", shareLink.getToken())
+                .set("updatedAt", new Date());
+        mongoTemplate.upsert(query, update, Folder.class);
+        rootFolder.updateShareToken(shareLink.getToken());
+
+        // 링크 업데이트 시작
+        boolean result = updateFolderAndChildren(rootFolder);
+
+        if(result){
+            return true;
+        }else{
+            return false;
+        }
+    }
+
+    private boolean updateFolderAndChildren(Folder folder) {
+        String sharedtoken = folder.getSharedToken();
+
+        // 현재 폴더의 파일 처리
+        List<FileMogo> files =  fileMogoRepository.findAllByFolderId(folder.getId());
+        int size = files.size();
+        int count =0;
+        for (FileMogo file : files) {
+            Query query = new Query(Criteria.where("_id").is(file.getId()));
+            Update update = new Update()
+                    .set("isShared", 1)
+                    .set("sharedToken", sharedtoken)
+                    .set("updatedAt", new Date());
+            mongoTemplate.upsert(query, update, Folder.class);
+            count ++;
+        }
+
+        // 하위 폴더 재귀적으로 처리
+        List<Folder> children = folderMogoRepository.findAllByParentId(folder.getId());
+        size += children.size();
+        for (Folder child : children) {
+            Query query = new Query(Criteria.where("_id").is(child.getId()));
+            Update update = new Update()
+                    .set("isShared", 1)
+                    .set("sharedToken", sharedtoken)
+                    .set("updatedAt", new Date());
+            mongoTemplate.upsert(query, update, Folder.class);
+            updateFolderAndChildren(child);
+            count ++;
+
+        }
+        if(count == size){
+            return true;
+        }else{
+            return false;
+        }
+    }
+
+    public boolean validateToken(String token){
+
+        log.info("여기 들어와 "+token);
+        Optional<ShareLink> opt= shareLinkRepository.findByToken(token);
+
+        if(opt.isPresent()){
+
+
+            ShareLink shareLink = opt.get();
+            log.info("여기 들어와 shareLink  "+shareLink);
+            boolean isExpired = shareLink.isExpired();
+            log.info("isExpired  "+isExpired);
+
+            if(isExpired){
+                return false;
+            }else{
+                return true;
+            }
+
+        }
+        return false;
     }
 }

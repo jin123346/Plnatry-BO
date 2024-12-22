@@ -53,6 +53,9 @@ public class File {
     @CreationTimestamp
     private LocalDateTime createdAt; // 파일 생성 날짜 및 시간
 
+    private String sharedToken;
+
+
     @UpdateTimestamp
     private LocalDateTime updatedAt; // 파일 수정 날짜 및 시간
 }
