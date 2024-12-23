@@ -654,5 +654,116 @@ public class SftpService {
         }
     }
 
+    public void moveToFolder(String draggingPath, String newPath) {
+        try {
+            // SFTP 연결 설정
+            JSch jsch = new JSch();
+            Session session = jsch.getSession(SFTP_USER, SFTP_HOST, SFTP_PORT);
+            session.setPassword(SFTP_PASSWORD);
+            session.setConfig("StrictHostKeyChecking", "no");
+            session.connect();
+
+            // 복사 명령 실행
+            String copyCommand = String.format("cp -r %s %s/", draggingPath, newPath);
+            log.info("Executing SFTP copy command: {}", copyCommand);
+
+            ChannelExec copyChannel = (ChannelExec) session.openChannel("exec");
+            copyChannel.setCommand(copyCommand);
+
+            InputStream copyInputStream = copyChannel.getInputStream();
+            InputStream copyErrorStream = copyChannel.getErrStream();
+            copyChannel.connect();
+
+            String copyResult = new BufferedReader(new InputStreamReader(copyInputStream))
+                    .lines()
+                    .collect(Collectors.joining("\n"));
+            String copyError = new BufferedReader(new InputStreamReader(copyErrorStream))
+                    .lines()
+                    .collect(Collectors.joining("\n"));
+
+            int copyExitStatus = copyChannel.getExitStatus();
+            copyChannel.disconnect();
+
+            if (copyExitStatus != 0 || !copyError.isEmpty()) {
+                log.error("Failed to copy folder. Errors: {}", copyError);
+                return;
+            }
+            log.info("Folder copied successfully from {} to {}", draggingPath, newPath);
+
+            // 검증 단계
+            if (!verifyFolderContents(session, draggingPath, newPath)) {
+                log.error("Folder verification failed. Aborting delete.");
+                return;
+            }
+
+            // 복사가 성공하고 검증이 완료되면 원본 삭제
+            String deleteCommand = String.format("rm -rf %s", draggingPath);
+            log.info("Executing SFTP delete command: {}", deleteCommand);
+
+            ChannelExec deleteChannel = (ChannelExec) session.openChannel("exec");
+            deleteChannel.setCommand(deleteCommand);
+
+            InputStream deleteInputStream = deleteChannel.getInputStream();
+            InputStream deleteErrorStream = deleteChannel.getErrStream();
+            deleteChannel.connect();
+
+            String deleteResult = new BufferedReader(new InputStreamReader(deleteInputStream))
+                    .lines()
+                    .collect(Collectors.joining("\n"));
+            String deleteError = new BufferedReader(new InputStreamReader(deleteErrorStream))
+                    .lines()
+                    .collect(Collectors.joining("\n"));
+
+            int deleteExitStatus = deleteChannel.getExitStatus();
+            deleteChannel.disconnect();
+
+            if (deleteExitStatus == 0 && deleteError.isEmpty()) {
+                log.info("Original folder deleted successfully: {}", draggingPath);
+            } else {
+                log.error("Failed to delete original folder. Errors: {}", deleteError);
+            }
+
+            session.disconnect();
+
+        } catch (JSchException | IOException e) {
+            log.error("Error during folder move and cleanup: {}", e.getMessage(), e);
+        }
+    }
+
+    private boolean verifyFolderContents(Session session, String sourcePath, String targetPath) {
+        try {
+            ChannelExec verifyChannel = (ChannelExec) session.openChannel("exec");
+            String verifyCommand = String.format("diff -rq %s %s", sourcePath, targetPath);
+            log.info("Executing SFTP verify command: {}", verifyCommand);
+
+            verifyChannel.setCommand(verifyCommand);
+            InputStream verifyInputStream = verifyChannel.getInputStream();
+            InputStream verifyErrorStream = verifyChannel.getErrStream();
+            verifyChannel.connect();
+
+            String verifyResult = new BufferedReader(new InputStreamReader(verifyInputStream))
+                    .lines()
+                    .collect(Collectors.joining("\n"));
+            String verifyError = new BufferedReader(new InputStreamReader(verifyErrorStream))
+                    .lines()
+                    .collect(Collectors.joining("\n"));
+
+            verifyChannel.disconnect();
+
+            if (verifyResult.isEmpty() && verifyError.isEmpty()) {
+                log.info("Folder verification succeeded between {} and {}", sourcePath, targetPath);
+                return true;
+            } else {
+                log.error("Folder verification failed. Differences found: {}", verifyResult);
+                return false;
+            }
+
+        } catch (JSchException | IOException e) {
+            log.error("Error during folder verification: {}", e.getMessage(), e);
+            return false;
+        }
+    }
+
+
 
 }

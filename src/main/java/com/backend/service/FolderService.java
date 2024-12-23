@@ -4,14 +4,13 @@ package com.backend.service;
 import com.backend.document.drive.Restore;
 import com.backend.document.drive.ShareLink;
 import com.backend.dto.request.FileRequestDto;
-import com.backend.dto.request.drive.DeletedRequest;
-import com.backend.dto.request.drive.MoveFolderRequest;
-import com.backend.dto.request.drive.NewDriveRequest;
-import com.backend.dto.request.drive.RenameRequest;
+import com.backend.dto.request.drive.*;
 import com.backend.dto.response.drive.FolderDto;
 import com.backend.document.drive.FileMogo;
 import com.backend.document.drive.Folder;
 import com.backend.dto.response.drive.NewNameResponseDto;
+import com.backend.entity.folder.DriveSetting;
+import com.backend.repository.drive.DriveSettingRepository;
 import com.backend.repository.drive.FileMogoRepository;
 import com.backend.repository.drive.FolderMogoRepository;
 import com.backend.repository.drive.RestoreRepository;
@@ -25,8 +24,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -52,6 +49,7 @@ public class FolderService {
     private final ThumbnailService thumbnailService;
     private final MongoTemplate mongoTemplate;
     private final RestoreRepository restoreRepository;
+    private final DriveSettingRepository driveSettingRepository;
     private String fileServerUrl = "http://43.202.45.49:90/local/upload/create-folder";
 
 
@@ -82,7 +80,7 @@ public class FolderService {
         if(makeDrive != null){
            Folder folder =  Folder.builder()
                    .name(request.getName())
-                   .order(request.getOrder()==0 ? 0 : (request.getOrder()+1.0)*100) // 널 체크
+                   .order((request.getOrder()+1.0)*100) // 널 체크
                    .parentId(request.getParentId())
                    .path(makeDrive.getPath())
                    .folderUUID(makeDrive.getFolderUUID())
@@ -143,6 +141,26 @@ public class FolderService {
 
     }
 
+    public DriveSetting insertDriveSetting(String uId, Long userId){
+
+       Optional<DriveSetting> existing =  driveSettingRepository.findByUserId(userId);
+           if(existing.isPresent()){
+               return existing.get();
+           }
+
+            DriveSetting driveSetting = DriveSetting.builder()
+                    .userUid(uId)
+                    .userId(userId)
+                    .storage_alerts(true)
+                    .share_notifications(true)
+                    .updateAt(LocalDateTime.now())
+                    .drive_updates(true)
+                    .build();
+
+            return driveSettingRepository.save(driveSetting);
+
+    }
+
 
     public List<FolderDto> getFoldersByUid(String uid,String parentId){
         List<Folder> folders = folderMogoRepository.findByOwnerIdAndParentIdAndStatusIsNot(uid,parentId,0);
@@ -180,6 +198,33 @@ public class FolderService {
         List<Folder> folders = folderMogoRepository.findBySharedUsersUid(uid);
 
         return folders.stream().map(Folder::toDTO).collect(Collectors.toList());
+    }
+
+    public DriveSettingDto getDriveSetting(String uid,Long id){
+        DriveSetting savedDriveSetting = insertDriveSetting(uid,id);
+        return savedDriveSetting.toDto();
+    }
+
+    public DriveSettingDto updateSetting(String uid, Long id, DriveSettingDto driveSettingDto){
+        DriveSetting driveSetting = insertDriveSetting(uid, id);
+
+        String setting = driveSettingDto.getSetting();
+        boolean value = driveSettingDto.getValue();
+
+        if(setting.equals("fileUpdates")){
+            driveSetting.setDrive_updates(value);
+        }else if(setting.equals("shareNotifications")){
+            driveSetting.setShare_notifications(value);
+        }else if(setting.equals("storageAlerts")){
+            driveSetting.setStorage_alerts(value);
+        }else{
+            return null;
+        }
+
+       DriveSetting updateSetting = driveSettingRepository.save(driveSetting);
+        return updateSetting.toDto();
+
+
     }
 
 
@@ -254,6 +299,70 @@ public class FolderService {
         Folder changedFolder =folderMogoRepository.save(folder);
 
         return changedFolder.getOrder();
+    }
+
+
+
+    public void moveToFolder(MoveFolderRequest request){
+        Folder draggfolder = folderMogoRepository.findById(request.getFolderId()).orElseThrow(() -> new RuntimeException("Folder not found with ID: " + request.getFolderId()));
+        Folder targetFolder = folderMogoRepository.findById(request.getTargetFolderId()).orElseThrow(() -> new RuntimeException("Folder not found with ID: " + request.getTargetFolderId()));
+
+        log.info("draggfolderPath "+draggfolder.getPath());
+        log.info("targetFolderPath "+targetFolder.getPath());
+        String newPath = targetFolder.getPath()+"/"+draggfolder.getFolderUUID();
+
+        List<Double> orders  = folderMogoRepository.findOrderByParentIdOrderByOrderDesc(targetFolder.getId());
+        double order = orders.size() > 0 ? orders.get(0)+100 : 100.0;
+        Query query = new Query(Criteria.where("_id").is(draggfolder.getId()));
+        Update update = new Update().set("path",newPath ).set("updateAt",LocalDateTime.now()).set("parentId",targetFolder.getId()).set("order" , order);
+        mongoTemplate.upsert(query, update, Folder.class);
+
+        boolean updateSuccessful = updateFolderPaths(draggfolder, newPath);
+
+        if (!updateSuccessful) {
+            throw new RuntimeException("Failed to update paths for all subfolders and files.");
+        }
+
+        sftpService.moveToFolder(draggfolder.getPath(),newPath);
+
+    }
+
+    public boolean updateFolderPaths(Folder parentFolder ,String newPath){
+
+        List<FileMogo> fileMogos = fileMogoRepository.findAllByFolderId(parentFolder.getId());
+        int size = fileMogos.size();
+        int result = 0;
+        for(FileMogo file : fileMogos){
+            String fileNewPath = newPath+"/"+file.getSavedName();
+            if (!fileNewPath.equals(file.getPath())) { // Check if update is needed
+                file.updatePath(fileNewPath);
+                file.updateDate();
+                fileMogoRepository.save(file);
+            }
+            result++;
+        }
+
+        List<Folder> folders = folderMogoRepository.findAllByParentId(parentFolder.getId());
+        size += folders.size();
+        for(Folder folder : folders){
+            String folderNewPath = newPath+"/"+folder.getFolderUUID();
+            if (!folderNewPath.equals(folder.getPath())) { // Check if update is needed
+                folder.setPath(folderNewPath);
+                folder.updatedTime();
+                folderMogoRepository.save(folder);
+
+                updateFolderPaths(folder, folderNewPath);
+            }
+            result++;
+
+        }
+
+        if(size==result){
+            return true;
+        }else{
+            return false;
+        }
+
     }
 
 
@@ -628,6 +737,7 @@ public class FolderService {
             updateAllChildren(childFolder.getId());
         }
     }
+
     private String getUserRootPath(String userId) {
         return "uploads/" + userId;
     }

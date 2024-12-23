@@ -71,4 +71,8 @@ public class FileMogo {
                 .build();
         return fileRequestDto;
     }
+
+    public void updateDate(){this.updatedAt = LocalDateTime.now();}
+    public void updatePath(String newPath){this.path = newPath;}
+
 }

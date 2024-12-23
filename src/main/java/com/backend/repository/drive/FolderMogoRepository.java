@@ -41,4 +41,7 @@ public interface FolderMogoRepository extends MongoRepository<Folder, String>   
 
     List<Folder> findAllByPathStartingWith(String path);
     Optional<Folder> findByNameAndParentIdAndRestore(String name , String parentId, int restore);
+
+
+    List<Double> findOrderByParentIdOrderByOrderDesc(String parentId);
 }
