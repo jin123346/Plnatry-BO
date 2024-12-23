@@ -71,7 +71,7 @@ public class ProjectService {
     public Project createProject(PostProjectDTO postDTO, String username) {
 
         List<GetUsersAllDto> userList = postDTO.getCoworkers();
-        Project project = postDTO.toProject();
+        Project project = projectRepository.save(postDTO.toProject());
         // 공동 작업자 추가
         userList.forEach(u -> project.addCoworker(ProjectCoworker.builder()
                 .user(User.builder().id(u.getId()).build())
@@ -148,7 +148,6 @@ public class ProjectService {
         Optional<Project> optProject = projectRepository.findById(projectId);
         if (optProject.isPresent()) {
             Project project = optProject.get();
-            log.info("project"+project.getColumns().get(0));
             return project.toGetProjectDTO();
         }
         return null;
@@ -253,9 +252,10 @@ public class ProjectService {
         task.addSubTask(entity);
         return entity.toDTO();
     }
-    public void clickSubTask(Long id){
+    public GetProjectSubTaskDTO clickSubTask(Long id){
         ProjectSubTask subTask = subTaskRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("작업자를 찾을 수 없습니다. ID: " + id));
         subTask.click();
+        return subTask.toDTO();
     }
 
     public void delete(String type, Long id) {

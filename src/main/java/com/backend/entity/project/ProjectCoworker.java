@@ -73,11 +73,12 @@ public class ProjectCoworker { //프로젝트별 멤버 권한
             group = "소속없음";
         }
         return GetProjectCoworkerDTO.builder()
-                .id(user.getId())
+                .id(id)
+                .userId(user.getId())
                 .uid(user.getUid())
                 .name(user.getName())
                 .email(user.getEmail())
-                .profileImgPath(user.getProfileImgPath())
+                .profile(user.getProfileImgPath())
                 .group(group)
                 .level(user.getLevel()!=null?user.selectLevelString():null)
                 .canRead(canRead)

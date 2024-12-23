@@ -14,12 +14,13 @@ import java.util.List;
 public class GetProjectCoworkerDTO {
     private Long id;
 
+    private Long userId;
     private String uid;
     private String name;
     private String email;
     private String group;
     private String level;
-    private String profileImgPath; // 프로필 이미지의 sName (파일명)
+    private String profile; // 프로필 이미지의 sName (파일명)
 
     private boolean isOwner;
 
@@ -36,7 +37,7 @@ public class GetProjectCoworkerDTO {
     public ProjectCoworker toProjectCoworker() {
         return ProjectCoworker.builder()
                 .id(id)
-                .user(User.builder().uid(uid).name(name).email(email).profileImgPath(profileImgPath).build())
+                .user(User.builder().id(userId).uid(uid).name(name).email(email).profileImgPath(profile).build())
                 .isOwner(isOwner)
                 .canRead(canRead)
                 .canAddTask(canAddTask)
