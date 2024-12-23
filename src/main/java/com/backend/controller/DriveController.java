@@ -8,7 +8,10 @@ import com.backend.dto.response.UserDto;
 import com.backend.dto.response.drive.FolderDto;
 import com.backend.document.drive.Folder;
 import com.backend.dto.response.drive.FolderResponseDto;
+import com.backend.entity.user.Alert;
 import com.backend.entity.user.User;
+import com.backend.repository.UserRepository;
+import com.backend.repository.user.AlertRepository;
 import com.backend.service.*;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -25,6 +28,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDateTime;
 import java.util.*;
 
 @RestController
@@ -41,6 +45,8 @@ public class DriveController {
     private final SftpService sftpService;
     private final ThumbnailService thumbnailService;
     private final ProgressService progressService;
+    private final AlertRepository alertRepository;
+    private final UserRepository userRepository;
 
 
     //드라이브생성 => 제일 큰 폴더
@@ -48,8 +54,11 @@ public class DriveController {
     public void createDrive(@RequestBody NewDriveRequest newDriveRequest,HttpServletRequest request) {
         log.info("New drive request: " + newDriveRequest);
         String uid= (String) request.getAttribute("uid");
+        Long userId= (Long) request.getAttribute("id");
         newDriveRequest.setOwner(uid);
         Folder forFolder = folderService.getFolderName("ROOT",uid);
+
+        folderService.insertDriveSetting(uid,userId);
 
         //부모폴더생성
         if(forFolder == null) {
@@ -120,6 +129,25 @@ public class DriveController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body("폴더 생성에 실패했습니다.");
         }
+    }
+
+    @GetMapping("/settings")
+    public ResponseEntity driveSetting(HttpServletRequest request) {
+        String uid = (String)request.getAttribute("uid");
+        Long id = (Long)request.getAttribute("id");
+        DriveSettingDto driveSettingDto = folderService.getDriveSetting(uid,id);
+        log.info("Setting 정보!!! : "+driveSettingDto);
+
+        return ResponseEntity.ok().body(driveSettingDto);
+    }
+
+    @PostMapping("/settings/update")
+    public ResponseEntity updateDriveSetting(@RequestBody  DriveSettingDto driveSettingDto,HttpServletRequest request) {
+        String uid = (String)request.getAttribute("uid");
+        Long id = (Long)request.getAttribute("id");
+        DriveSettingDto updateDriveSetting = folderService.updateSetting(uid,id,driveSettingDto);
+        log.info("updateDriveSetting : "+updateDriveSetting);
+        return ResponseEntity.ok().body(updateDriveSetting);
     }
 
     //사이드바  폴더 리스트 불러오기
@@ -242,14 +270,24 @@ public class DriveController {
     @PutMapping("/folder/{folderId}/move")
     public ResponseEntity moveFolder(@RequestBody MoveFolderRequest moveFolderRequest, @PathVariable String folderId){
         log.info("move folder name:"+moveFolderRequest);
+        String position = moveFolderRequest.getPosition();
+        log.info("position:"+position);
+        if(moveFolderRequest.getPosition().equals("inside")){
+            log.info("inside 요청 들어오나???");
+            folderService.moveToFolder(moveFolderRequest);
+            return null;
 
-        double changedOrder =  folderService.updateFolder(moveFolderRequest);
-
-        if(moveFolderRequest.getOrder()== changedOrder){
-            return ResponseEntity.ok().body("Folder updated successfully");
         }else{
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Folder update failed");
+            double changedOrder =  folderService.updateFolder(moveFolderRequest);
+            log.info("changedOrder :: "+changedOrder);
+            if(moveFolderRequest.getOrder()== changedOrder){
+                return ResponseEntity.ok().body("Folder updated successfully");
+            }else{
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Folder update failed");
+            }
         }
+
+
 
 
     }
@@ -586,6 +624,36 @@ public class DriveController {
         int progress = 50; // 테스트용 진행률
         log.info("Received WebSocket message: {}", message);
         messagingTemplate.convertAndSend("/topic/progress/uploads/" + uid, progress);
+    }
+
+    @PostMapping("/notify")
+    public ResponseEntity sendStorageNotification(@RequestBody StorageNotificationRequest notificationRequest,
+                                                        HttpServletRequest request) {
+
+        log.info("여기 들어와야하는데???");
+        Long userId = (Long) request.getAttribute("id");
+        User user  = userRepository.findById(userId).orElse(null);
+        // 알람 전송 주기 (1시간)
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime oneHourAgo = now.minusHours(1);
+        boolean recentAlertExists = alertRepository.existsByUserIdAndTypeAndCreateAtAfter(userId,2,oneHourAgo.toString());
+
+        if (recentAlertExists) {
+            log.info("알람이 이미 전송됨, 주기 내 추가 알람 전송 생략");
+            return ResponseEntity.ok().body("already recent alert");
+        }
+
+                Alert alert = Alert.builder()
+                .content(notificationRequest.getMessage())
+                .type(2)
+                .title("주의")
+                .status(2)
+                .user(user)
+                .createAt(LocalDateTime.now().toString())
+                .build();
+        Alert savedAlert = alertRepository.save(alert);
+        messagingTemplate.convertAndSendToUser(userId.toString(),"/topic/alerts/", savedAlert.toGetAlarmDto());
+        return ResponseEntity.ok().build();
     }
 
 
