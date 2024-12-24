@@ -4,6 +4,7 @@ import com.backend.document.drive.Folder;
 import com.backend.dto.request.drive.SharedUser;
 import com.backend.entity.page.Page;
 import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.mongodb.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.awt.print.Pageable;
@@ -14,7 +15,7 @@ import java.util.Optional;
 @Repository
 public interface FolderMogoRepository extends MongoRepository<Folder, String>   {
 
-    List<Folder> findByParentIdAndStatusIsNotOrderByOrder( String parentId , int status);
+    List<Folder> findByParentIdAndStatusIsNotOrderByOrderDesc( String parentId , int status);
     Optional<Folder> findByParentId(String parentId);
     Folder findByName(String name);
     Optional<Folder> findByPath(String path);
@@ -44,4 +45,8 @@ public interface FolderMogoRepository extends MongoRepository<Folder, String>   
 
 
     List<Double> findOrderByParentIdOrderByOrderDesc(String parentId);
+
+
+    @Query(value = "{ 'parentId': ?0 }", count = true)
+    long countByParentId(String parentId);
 }

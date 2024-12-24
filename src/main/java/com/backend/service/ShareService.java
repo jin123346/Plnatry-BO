@@ -123,7 +123,7 @@ public class ShareService {
                             .email(user1.getEmail())
                             .authority(user1.getRole().toString())
                             .group(groupName)
-                            .permission(sharedUser.getPermission())
+                            .permission(sharedUser.getPermission() == null ? "읽기" : sharedUser.getPermission())
                             .build();
                     savedUser.add(users);
 
@@ -218,7 +218,7 @@ public class ShareService {
                                 .id(user.getId())
                                 .authority(user.getRole() != null ? user.getRole().toString() : "default") // 기본 권한 값 설정                            .
                                 .uid(user.getUid())
-                                .permission(permission)
+                                .permission(permission )
                                 .name(user.getName())
                                 .email(user.getEmail())
                                 .group(group.getDepartmentName())
@@ -490,7 +490,7 @@ public class ShareService {
                     .set("isShared", 1)
                     .set("sharedToken", sharedtoken)
                     .set("updatedAt", new Date());
-            mongoTemplate.upsert(query, update, Folder.class);
+            mongoTemplate.upsert(query, update, FileMogo.class);
             count ++;
         }
 

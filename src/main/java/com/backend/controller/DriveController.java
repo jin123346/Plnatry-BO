@@ -30,6 +30,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @RestController
 @Log4j2
@@ -93,21 +94,49 @@ public class DriveController {
         log.info("New drive request: " + newDriveRequest);
 
         String uid= (String) request.getAttribute("uid");
+        if (uid == null || uid.isEmpty()) {
+            return ResponseEntity
+                    .status(HttpStatus.UNAUTHORIZED)
+                    .body("사용자 인증이 필요합니다.");
+        }
         newDriveRequest.setOwner(uid);
 
-        FolderDto folderDto = folderService.getParentFolder(newDriveRequest.getParentId());
+//        FolderDto folderDto = folderService.getParentFolder(newDriveRequest.getParentId());
+
+        FolderDto folderDto;
+        try {
+            folderDto = folderService.getParentFolder(newDriveRequest.getParentId());
+            if (folderDto == null) {
+                return ResponseEntity
+                        .status(HttpStatus.BAD_REQUEST)
+                        .body("유효하지 않은 상위 폴더 ID입니다.");
+            }
+        } catch (Exception e) {
+            log.error("Error fetching parent folder: ", e);
+            return ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("상위 폴더를 가져오는 중 오류가 발생했습니다.");
+        }
 
         //읽기 권한시 업로드 불가능
         if(!folderDto.getOwnerId().equals(uid)){
-            Optional<String>  opt = folderDto.getSharedUsers()
+            List<SharedUser> list = folderDto.getSharedUsers()
                     .stream()
-                    .filter(sharedUser -> sharedUser.getUid().equals(uid)) // uid가 일치하는 사용자 찾기
-                    .map(sharedUser -> sharedUser.getPermission()) // 권한 추출
-                    .findFirst(); // 첫 번째 일치하는 권한 반환
-            if(opt.isPresent() && opt.get().equals("읽기")){
+                    .filter(sharedUser -> sharedUser.getId().equals(uid))
+                    .collect(Collectors.toList());
+
+                     // 첫 번째 일치하는 권한 반환
+            if (list.isEmpty()) {
                 return ResponseEntity
                         .status(HttpStatus.BAD_REQUEST)
                         .body("폴더 생성 권한이 없습니다.");
+            }else{
+                String permission = list.get(0).getPermission();
+                if ("읽기".equals(permission)) {
+                    return ResponseEntity
+                            .status(HttpStatus.BAD_REQUEST)
+                            .body("폴더 생성 권한이 없습니다.");
+                }
             }
 
         }
@@ -334,15 +363,23 @@ public class DriveController {
 
         //읽기 권한시 업로드 불가능
         if(!parentFolder.getOwnerId().equals(uid)){
-           Optional<String>  opt = parentFolder.getSharedUsers()
-                   .stream()
-                   .filter(sharedUser -> sharedUser.getUid().equals(uid)) // uid가 일치하는 사용자 찾기
-                   .map(sharedUser -> sharedUser.getPermission()) // 권한 추출
-                   .findFirst(); // 첫 번째 일치하는 권한 반환
-            if(opt.isPresent() && opt.get().equals("읽기")){
+            List<SharedUser> list = parentFolder.getSharedUsers()
+                    .stream()
+                    .filter(sharedUser -> sharedUser.getId().equals(uid))
+                    .collect(Collectors.toList());
+
+            // 첫 번째 일치하는 권한 반환
+            if (list.isEmpty()) {
                 return ResponseEntity
                         .status(HttpStatus.BAD_REQUEST)
-                        .body("업로드 권한이 없습니다.");
+                        .body("파일 업로드 권한이 없습니다.");
+            }else{
+                String permission = list.get(0).getPermission();
+                if ("읽기".equals(permission)) {
+                    return ResponseEntity
+                            .status(HttpStatus.BAD_REQUEST)
+                            .body("파일 업로드 권한이 없습니다.");
+                }
             }
 
         }
