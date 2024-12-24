@@ -30,7 +30,7 @@ public class ProjectController {
     public ResponseEntity<?> createProject(@RequestBody PostProjectDTO dto, HttpServletRequest request) {
         String ownerUid = (String) request.getAttribute("uid");
         Project savedProject = projectService.createProject(dto, ownerUid);
-        return ResponseEntity.ok().body(savedProject.toGetProjectDTO());
+        return ResponseEntity.ok().body(savedProject.getId());
     }
 
     @GetMapping("/projects") // 프로젝트 목록 출력
@@ -45,6 +45,13 @@ public class ProjectController {
         GetProjectDTO dto = projectService.getProject(projectId);
         return ResponseEntity.ok().body(dto);
     }
+    @PutMapping("/project/{projectId}") // 프로젝트 페이지 출력
+    public ResponseEntity<?> putProject(@PathVariable Long projectId, @RequestBody GetProjectDTO dto) {
+        dto.setId(projectId);
+        GetProjectDTO updatedProject = projectService.putProject(dto);
+        return ResponseEntity.ok().body(updatedProject);
+    }
+
     @GetMapping("/project/{projectId}/column") // 프로젝트 페이지 출력
     public ResponseEntity<?> getColumn(@PathVariable Long projectId) {
         List<GetProjectColumnDTO> columnList = projectService.getColumns(projectId);
