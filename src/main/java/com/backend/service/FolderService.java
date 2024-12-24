@@ -242,12 +242,12 @@ public class FolderService {
     }
 
     public List<FolderDto> getSubFolders(String ownerId, String folderId){
-        List<Folder> folders =folderMogoRepository.findByParentIdAndStatusIsNotOrderByOrder(folderId,0);
+        List<Folder> folders =folderMogoRepository.findByParentIdAndStatusIsNotOrderByOrderDesc(folderId,0);
         return folders.stream().map(Folder::toDTO).collect(Collectors.toList());
     }
 
     public List<FolderDto> getSharedSubFolders(Long id, String folderId){
-        List<Folder> folders =folderMogoRepository.findByParentIdAndStatusIsNotOrderByOrder(folderId,0);
+        List<Folder> folders =folderMogoRepository.findByParentIdAndStatusIsNotOrderByOrderDesc(folderId,0);
         return folders.stream().map(Folder::toDTO).collect(Collectors.toList());
     }
 
@@ -313,11 +313,11 @@ public class FolderService {
         Folder targetFolder = folderMogoRepository.findById(request.getTargetFolderId()).orElseThrow(() -> new RuntimeException("Folder not found with ID: " + request.getTargetFolderId()));
 
         log.info("draggfolderPath "+draggfolder.getPath());
-        log.info("targetFolderPath "+targetFolder.getPath());
+        log.info("targetFolderPath "+targetFolder.getOrder());
         String newPath = targetFolder.getPath()+"/"+draggfolder.getFolderUUID();
 
-        List<Double> orders  = folderMogoRepository.findOrderByParentIdOrderByOrderDesc(targetFolder.getId());
-        double order = orders.size() > 0 ? orders.get(0)+100 : 100.0;
+        long orders  = folderMogoRepository.countByParentId(targetFolder.getId());
+        double order =  (orders +1)*100.0;
         Query query = new Query(Criteria.where("_id").is(draggfolder.getId()));
         Update update = new Update().set("path",newPath ).set("updateAt",LocalDateTime.now()).set("parentId",targetFolder.getId()).set("order" , order);
         mongoTemplate.upsert(query, update, Folder.class);
