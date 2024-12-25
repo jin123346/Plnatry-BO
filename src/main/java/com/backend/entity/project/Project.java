@@ -33,6 +33,7 @@ public class Project { //프로젝트
 
     @Setter
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("position ASC") // position 필드 기준 오름차순 정렬
     @ToString.Exclude
     @Builder.Default
     private List<ProjectColumn> columns = new ArrayList<>();

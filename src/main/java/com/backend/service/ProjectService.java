@@ -227,6 +227,12 @@ public class ProjectService {
         // 기존 Assign 데이터 삭제
         assignRepository.deleteByTaskId(originTask.getId());
 
+        // Column이 영속성 컨텍스트에 있는지 확인
+        if (task.getColumn() != null && task.getColumn().getId() != null) {
+            ProjectColumn column = columnRepository.findById(task.getColumn().getId())
+                    .orElseThrow(() -> new IllegalArgumentException("Column not found with id: " + task.getColumn().getId()));
+            task.setColumn(column); // 영속화된 Column을 설정
+        }
         // Task 정보 업데이트
         originTask.update(task);
 
