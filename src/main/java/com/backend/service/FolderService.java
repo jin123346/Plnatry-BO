@@ -454,9 +454,7 @@ public class FolderService {
                 }
             }
            FileMogo savedFile =  fileMogoRepository.save(saved);
-
             size ++;
-
         }
 
         if(size == files.size()){
