@@ -24,6 +24,7 @@ public class GetProjectTaskDTO {
     private String content; // 세부사항
     private String priority; // 중요도
 
+    private int position;
     private int status; // 완료, 미완료
 
     private LocalDate duedate; // 마감일
@@ -38,13 +39,18 @@ public class GetProjectTaskDTO {
                 .column(ProjectColumn.builder().id(columnId).build())
                 .title(title)
                 .content(content)
+                .position(position)
                 .priority(priority)
                 .duedate(duedate)
                 .status(status)
                 .subTasks(subTasks.stream().map(GetProjectSubTaskDTO::toEntity).collect(Collectors.toList()))
                 .comments(comments.stream().map(GetProjectCommentDTO::toEntity).collect(Collectors.toList()))
                 .build();
-        return this.addAssign(task);
+        if (!assign.isEmpty()) {
+            return this.addAssign(task);
+        } else {
+            return task;
+        }
     }
     private ProjectTask addAssign(ProjectTask task) {
         task.setAssign(associate.stream().map(DTO->(
