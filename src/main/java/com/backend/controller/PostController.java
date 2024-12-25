@@ -47,19 +47,36 @@ public class PostController {
     }
 
     @PostMapping("/write")
-    public ResponseEntity<PostDTO> createPost(@ModelAttribute PostDTO postDTO,
-                                              @RequestParam("files") List<MultipartFile> files, // 파일 처리
-                                              HttpServletRequest request) {
-        log.info("글쓰기 컨트롤러 ");
-        String uid = (String) request.getAttribute("uid");
-        postDTO.setUid(uid);
-        log.info("postDTO: " + postDTO);
-        // 게시글 생성
-        ResponseEntity result = postService.createPost(postDTO);
+    public ResponseEntity<?> createPost(@ModelAttribute PostDTO postDTO,
+                                        @RequestParam("files") List<MultipartFile> files,
+                                        HttpServletRequest request) {
+        log.info("글쓰기 컨트롤러 호출");
 
-        // 응답 반환
-        return result;
+        String uid = (String) request.getAttribute("uid");
+        postDTO.setUid(uid);  // UID 설정
+        log.info("Received PostDTO: " + postDTO);
+
+        try {
+            // 파일 처리 로직
+            if (files != null && !files.isEmpty()) {
+                // 파일 처리 예시: 파일 저장
+            }
+
+            // 게시글 생성
+            ResponseEntity<?> resultPostDTO = postService.createPost(postDTO);
+
+            return ResponseEntity.status(HttpStatus.CREATED).body(resultPostDTO);
+
+        } catch (Exception e) {
+            log.error("게시글 생성 중 오류 발생: " + e.getMessage(), e);
+
+            // 실패 시 에러 메시지를 ResponseEntity에 포함하여 반환
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("게시글 생성 실패: " + e.getMessage());
+        }
     }
+
+
 
     @GetMapping("/posts")
     public ResponseEntity<List<PostDTO>> getView(@RequestParam Long boardId, Authentication authentication, Pageable pageable) {
@@ -199,5 +216,4 @@ public class PostController {
 
 
 }
-
 
