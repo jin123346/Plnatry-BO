@@ -124,7 +124,7 @@ public class DriveController {
         if(!folderDto.getOwnerId().equals(uid)){
             List<SharedUser> list = folderDto.getSharedUsers()
                     .stream()
-                    .filter(sharedUser -> sharedUser.getId().equals(uid))
+                    .filter(sharedUser -> sharedUser.getUid().equals(uid))
                     .collect(Collectors.toList());
 
                      // 첫 번째 일치하는 권한 반환
@@ -367,7 +367,7 @@ public class DriveController {
         if(!parentFolder.getOwnerId().equals(uid)){
             List<SharedUser> list = parentFolder.getSharedUsers()
                     .stream()
-                    .filter(sharedUser -> sharedUser.getId().equals(uid))
+                    .filter(sharedUser -> sharedUser.getUid().equals(uid))
                     .collect(Collectors.toList());
 
             // 첫 번째 일치하는 권한 반환

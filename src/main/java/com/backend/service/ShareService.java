@@ -79,9 +79,6 @@ public class ShareService {
 
                 List<SharedUser> existingSharedUsers = folder.getSharedUsers();
 
-
-
-
                 folder.setSharedUsers(savedUser);;
 
                 folderMogoRepository.save(folder);
@@ -164,16 +161,16 @@ public class ShareService {
                 }
 
                 List<SharedUser> finalSharedUsers = new ArrayList<>(userMap.values());
-                folder.setSharedUsers(finalSharedUsers);
+                folder.setSharedUsers(savedUser);
 
 
                 Query query = new Query(Criteria.where("_id").is(id));
                 Update update = new Update()
-                        .set("sharedUsers", finalSharedUsers) // 병합된 사용자 리스트 설정
+                        .set("sharedUsers", savedUser) // 병합된 사용자 리스트 설정
                         .set("invitations", saveInvitations);
                 mongoTemplate.upsert(query, update, Folder.class);
 
-                propagatePermissions(folder.getPath(),finalSharedUsers,folder.getSharedDepts(),saveInvitations,1);
+                propagatePermissions(folder.getPath(),savedUser,folder.getSharedDepts(),saveInvitations,1);
 
                 messageToSharedUser(savedUser,id);
 
