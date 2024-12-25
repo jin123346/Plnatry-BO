@@ -11,6 +11,7 @@ import com.backend.dto.response.drive.FolderResponseDto;
 import com.backend.entity.user.Alert;
 import com.backend.entity.user.User;
 import com.backend.repository.UserRepository;
+import com.backend.repository.drive.FolderMogoRepository;
 import com.backend.repository.user.AlertRepository;
 import com.backend.service.*;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -48,6 +49,7 @@ public class DriveController {
     private final ProgressService progressService;
     private final AlertRepository alertRepository;
     private final UserRepository userRepository;
+    private final FolderMogoRepository folderMogoRepository;
 
 
     //드라이브생성 => 제일 큰 폴더
@@ -421,13 +423,13 @@ public class DriveController {
                             currentParentId = existingFolder.getId(); // 기존 폴더 사용
                             continue;
                         }
-
+                        FolderDto newParentFolder = folderService.getParentFolder(currentParentId);
                         // 새로운 폴더 생성
                         NewDriveRequest newDriveRequest = NewDriveRequest.builder()
                                 .name(folderOrFileName)
                                 .owner(uid)
                                 .parentId(currentParentId)
-                                .parentFolder(parentFolder)
+                                .parentFolder(newParentFolder)
                                 .order(folderOrder)
                                 .build();
                         String newFolderId = folderService.createFolder(newDriveRequest);
