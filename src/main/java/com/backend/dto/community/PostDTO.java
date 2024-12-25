@@ -6,6 +6,7 @@ package com.backend.dto.community;
     내용 : Post Entity 작성
  */
 
+import com.backend.document.BoardFile;
 import com.backend.entity.community.BaseTimeEntity;
 import com.backend.entity.community.Board;
 import com.backend.entity.user.User;
@@ -15,6 +16,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Getter
 @Setter
@@ -39,9 +41,14 @@ public class PostDTO {
 
     private boolean favoritePost;
 
-    private MultipartFile file;
+    private List<MultipartFile> files;
+
+    private List<BoardFile> savedFiles; // 조회용
+
 
     private boolean isMandatory;
+
+    private int hit;
 
     private Long boardId;
 
