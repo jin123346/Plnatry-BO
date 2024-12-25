@@ -58,11 +58,12 @@ public class ProjectTask {
     public GetProjectTaskDTO toGetProjectTaskDTO() {
         GetProjectTaskDTO task = GetProjectTaskDTO.builder()
                 .id(id)
-                .ProjectId(column.getProject().getId())
+                .ProjectId(column.getProject()!=null?column.getProject().getId():null)
                 .columnId(column.getId())
                 .title(title)
                 .content(content)
                 .priority(priority)
+                .position(position)
                 .status(status)
                 .duedate(duedate)
                 .comments(comments.stream().map(ProjectComment::toDTO).collect(Collectors.toList()))
@@ -88,7 +89,9 @@ public class ProjectTask {
         if(!this.title.equals(task.title)) this.title = task.title;
         if(!this.content.equals(task.content)) this.content = task.content;
         if(!this.priority.equals(task.priority)) this.priority = task.priority;
-        if(!this.duedate.equals(task.duedate))this.duedate = task.duedate;
+        this.column = task.column;
+        this.position = task.position;
+        this.duedate = task.duedate;
         // Assign 컬렉션 업데이트
         this.assign.clear();
         if (task.assign != null) {

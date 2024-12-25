@@ -39,6 +39,7 @@ public class FileMogo {
     private Integer version = 1; // 파일 버전 (업데이트 시 증가)
 
     private int isShared = 0; // 1이 share중
+    private String sharedToken;
     private int isPinned = 0; // 1: 고정 폴더
 
     private int status =0 ; // 파일 삭제 여부 (논리적 삭제)
@@ -65,7 +66,13 @@ public class FileMogo {
                 .updatedAt(this.updatedAt)
                 .size(this.size)
                 .folderId(this.folderId)
+                .sharedToken(this.sharedToken)
+                .isShared(this.isShared)
                 .build();
         return fileRequestDto;
     }
+
+    public void updateDate(){this.updatedAt = LocalDateTime.now();}
+    public void updatePath(String newPath){this.path = newPath;}
+
 }

@@ -322,9 +322,9 @@ public class PostService {
     }
 
     // 게시판 ID로 게시글 목록 조회(페이징처리)
-    public List<PostDTO> getNotice(Long boardId) {
-        List<Post> postsPage = postRepository.findTop4ByBoard_BoardIdOrderByCreatedAtDesc(boardId);
-
+    public List<PostDTO> getNotice(Long userId, Long boardId) {
+        List<Post> postsPage = postRepository.findTop5ByBoard_BoardIdOrderByCreatedAtDesc(boardId);
+        
         // Post 엔티티를 PostDTO로 변환
         return postsPage.stream()
                 .map(post -> {
@@ -339,6 +339,9 @@ public class PostService {
                             .content(post.getContent())
                             .writer(userEntity != null ? userEntity.getName() : "Unknown") // User에서 이름 가져오기
                             .createdAt(post.getCreatedAt())
+                            .hit(post.getHit())
+                            .comment(post.getCommentCount())
+                            .isMandatory(post.isMandatory())
                             .build();
                 })
                 .collect(Collectors.toList());

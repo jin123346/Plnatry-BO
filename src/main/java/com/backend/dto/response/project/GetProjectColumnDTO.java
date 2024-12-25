@@ -16,6 +16,7 @@ public class GetProjectColumnDTO {
 
     private String title;
     private String color;
+    private int role;
     private int position;
 
     private List<GetProjectTaskDTO> tasks;
@@ -25,6 +26,7 @@ public class GetProjectColumnDTO {
                 .id(id)
                 .title(title)
                 .color(color)
+                .role(role)
                 .position(position)
                 .project(Project.builder().id(projectId).build())
                 .build();
@@ -34,6 +36,7 @@ public class GetProjectColumnDTO {
                 .id(id)
                 .title(title)
                 .color(color)
+                .role(role)
                 .position(position)
                 .tasks(tasks.stream().map(GetProjectTaskDTO::toProjectTask).collect(Collectors.toList()))
                 .build();

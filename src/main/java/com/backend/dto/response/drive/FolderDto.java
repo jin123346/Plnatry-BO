@@ -43,9 +43,14 @@ public class FolderDto {
     private String sharedDept;
     private String parentPath;
     private int target;
+    private int restore;
+    private String sharedToken;
 
 
+    @Builder.Default
     private List<ShareDept> shareDepts = new ArrayList<>();
+    @Builder.Default
     private List<SharedUser> sharedUsers = new ArrayList<>();
+    @Builder.Default
     private List<Invitation> invitations = new ArrayList<>();
 }

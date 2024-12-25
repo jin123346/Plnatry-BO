@@ -13,6 +13,9 @@ public class MoveFolderRequest {
     private String targetFolderId;
     private double order;
     private double currentOrder;
+    private String position;
+    private String fileId;
+
 
 
 

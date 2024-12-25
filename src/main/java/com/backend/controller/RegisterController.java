@@ -154,7 +154,10 @@ public class RegisterController {
                     .status(1)
                     .masterEmail(insertUser.getEmail())
                     .build();
+
+            newDriveRequest.setOwnerId(insertUser.getId());
             folderService.createRootDrive(newDriveRequest);
+            folderService.insertDriveSetting(insertUser.getUid(),insertUser.getId());
 
             if (savedDocument != null) {
                 return ResponseEntity.ok().body("success");

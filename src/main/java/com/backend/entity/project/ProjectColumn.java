@@ -22,6 +22,7 @@ public class ProjectColumn {
 
     private String title;
     private String color;
+    private int role;
 
     @Setter
     private int position;
@@ -33,6 +34,7 @@ public class ProjectColumn {
 
     @Setter
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "column", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("position ASC") // position 필드 기준 오름차순 정렬
     @Builder.Default
     private List<ProjectTask> tasks = new ArrayList<>();
 
@@ -41,6 +43,7 @@ public class ProjectColumn {
                 .id(id)
                 .title(title)
                 .color(color)
+                .role(role)
                 .position(position)
                 .tasks(tasks.stream().map(ProjectTask::toGetProjectTaskDTO).collect(Collectors.toList()))
                 .build();

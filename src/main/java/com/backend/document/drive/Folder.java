@@ -50,6 +50,7 @@ public class Folder {
     @Builder.Default
     private String sharedDept = "[]";
 
+    private String sharedToken;
 
 
     @Setter
@@ -66,6 +67,9 @@ public class Folder {
 
     @Builder.Default
     private int target=0;
+
+    @Builder.Default
+    private int restore=0;
 
     @Builder.Default
     private int isPinned = 0; // 1: 고정 폴더
@@ -93,6 +97,8 @@ public class Folder {
                 .sharedUsers(this.sharedUsers)
                 .invitations(this.invitations)
                 .target(this.target)
+                .restore(this.restore)
+                .sharedToken(this.sharedToken)
                 .build();
     }
 
@@ -107,6 +113,12 @@ public class Folder {
     public void updateSharedDept(String newSharedDept){this.sharedDept = newSharedDept;}
     public void updateSharedUsers(List<SharedUser> newSharedUsers){this.sharedUsers = newSharedUsers;}
     public void setTarget(){this.target=1;}
+    public void setRestore(int restore){this.restore=1;}
+    public void setPath(String path){this.path = path;}
+
+    public void updatedTime(){this.updatedAt = LocalDateTime.now();}
+    public void updateParentId(String parentId){this.parentId = parentId;}
+    public void updateShareToken(String sharedToken){this.sharedToken = sharedToken;}
 
 }
 

@@ -8,7 +8,11 @@ import com.backend.dto.response.UserDto;
 import com.backend.dto.response.drive.FolderDto;
 import com.backend.document.drive.Folder;
 import com.backend.dto.response.drive.FolderResponseDto;
+import com.backend.entity.user.Alert;
 import com.backend.entity.user.User;
+import com.backend.repository.UserRepository;
+import com.backend.repository.drive.FolderMogoRepository;
+import com.backend.repository.user.AlertRepository;
 import com.backend.service.*;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -25,7 +29,9 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @RestController
 @Log4j2
@@ -41,6 +47,9 @@ public class DriveController {
     private final SftpService sftpService;
     private final ThumbnailService thumbnailService;
     private final ProgressService progressService;
+    private final AlertRepository alertRepository;
+    private final UserRepository userRepository;
+    private final FolderMogoRepository folderMogoRepository;
 
 
     //드라이브생성 => 제일 큰 폴더
@@ -48,8 +57,11 @@ public class DriveController {
     public void createDrive(@RequestBody NewDriveRequest newDriveRequest,HttpServletRequest request) {
         log.info("New drive request: " + newDriveRequest);
         String uid= (String) request.getAttribute("uid");
+        Long userId= (Long) request.getAttribute("id");
         newDriveRequest.setOwner(uid);
         Folder forFolder = folderService.getFolderName("ROOT",uid);
+
+        folderService.insertDriveSetting(uid,userId);
 
         //부모폴더생성
         if(forFolder == null) {
@@ -84,21 +96,49 @@ public class DriveController {
         log.info("New drive request: " + newDriveRequest);
 
         String uid= (String) request.getAttribute("uid");
+        if (uid == null || uid.isEmpty()) {
+            return ResponseEntity
+                    .status(HttpStatus.UNAUTHORIZED)
+                    .body("사용자 인증이 필요합니다.");
+        }
         newDriveRequest.setOwner(uid);
 
-        FolderDto folderDto = folderService.getParentFolder(newDriveRequest.getParentId());
+//        FolderDto folderDto = folderService.getParentFolder(newDriveRequest.getParentId());
+
+        FolderDto folderDto;
+        try {
+            folderDto = folderService.getParentFolder(newDriveRequest.getParentId());
+            if (folderDto == null) {
+                return ResponseEntity
+                        .status(HttpStatus.BAD_REQUEST)
+                        .body("유효하지 않은 상위 폴더 ID입니다.");
+            }
+        } catch (Exception e) {
+            log.error("Error fetching parent folder: ", e);
+            return ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("상위 폴더를 가져오는 중 오류가 발생했습니다.");
+        }
 
         //읽기 권한시 업로드 불가능
         if(!folderDto.getOwnerId().equals(uid)){
-            Optional<String>  opt = folderDto.getSharedUsers()
+            List<SharedUser> list = folderDto.getSharedUsers()
                     .stream()
-                    .filter(sharedUser -> sharedUser.getUid().equals(uid)) // uid가 일치하는 사용자 찾기
-                    .map(sharedUser -> sharedUser.getPermission()) // 권한 추출
-                    .findFirst(); // 첫 번째 일치하는 권한 반환
-            if(opt.isPresent() && opt.get().equals("읽기")){
+                    .filter(sharedUser -> sharedUser.getUid().equals(uid))
+                    .collect(Collectors.toList());
+
+                     // 첫 번째 일치하는 권한 반환
+            if (list.isEmpty()) {
                 return ResponseEntity
                         .status(HttpStatus.BAD_REQUEST)
                         .body("폴더 생성 권한이 없습니다.");
+            }else{
+                String permission = list.get(0).getPermission();
+                if ("읽기".equals(permission)) {
+                    return ResponseEntity
+                            .status(HttpStatus.BAD_REQUEST)
+                            .body("폴더 생성 권한이 없습니다.");
+                }
             }
 
         }
@@ -122,6 +162,25 @@ public class DriveController {
         }
     }
 
+    @GetMapping("/settings")
+    public ResponseEntity driveSetting(HttpServletRequest request) {
+        String uid = (String)request.getAttribute("uid");
+        Long id = (Long)request.getAttribute("id");
+        DriveSettingDto driveSettingDto = folderService.getDriveSetting(uid,id);
+        log.info("Setting 정보!!! : "+driveSettingDto);
+
+        return ResponseEntity.ok().body(driveSettingDto);
+    }
+
+    @PostMapping("/settings/update")
+    public ResponseEntity updateDriveSetting(@RequestBody  DriveSettingDto driveSettingDto,HttpServletRequest request) {
+        String uid = (String)request.getAttribute("uid");
+        Long id = (Long)request.getAttribute("id");
+        DriveSettingDto updateDriveSetting = folderService.updateSetting(uid,id,driveSettingDto);
+        log.info("updateDriveSetting : "+updateDriveSetting);
+        return ResponseEntity.ok().body(updateDriveSetting);
+    }
+
     //사이드바  폴더 리스트 불러오기
     @GetMapping("/folders")
     public ResponseEntity getDriveList(HttpServletRequest request,@RequestParam(required = false) String uid) {
@@ -136,13 +195,28 @@ public class DriveController {
         }
         log.info("Get drive list  uid:"+uid);
         Folder rootFolder = folderService.getFolderName("ROOT",uid);
+        String rootId = null;
         if (rootFolder == null) {
-            return ResponseEntity.ok().body("No folders found.");
+            User user = userService.getUserByuid(uid);
+            NewDriveRequest newDriveRequest = NewDriveRequest.builder()
+                    .type("ROOT")
+                    .description(uid+"의 드라이브")
+                    .driveMaster(uid)
+                    .order(0)
+                    .owner(uid)
+                    .name(user.getName())
+                    .status(1)
+                    .masterEmail(user.getEmail())
+                    .build();
+            rootId = folderService.createRootDrive(newDriveRequest);
+            folderService.insertDriveSetting(user.getUid(),user.getId());
+        }else{
+            rootId = rootFolder.getId();
         }
-        List<FolderDto> folderDtoList =  folderService.getFoldersByUid(uid, rootFolder.getId());
 
-
+        List<FolderDto> folderDtoList =  folderService.getFoldersByUid(uid, rootId);
         List<FolderDto> shareFolderList= folderService.sharedFolder(uid);
+
         log.info("공유된 내용이 없어?",shareFolderList);
 
         FolderResponseDto folderResponseDto  = FolderResponseDto.builder()
@@ -238,19 +312,37 @@ public class DriveController {
 
     }
 
-    //폴더 이름 바꾸기
-    @PutMapping("/folder/{folderId}/move")
-    public ResponseEntity moveFolder(@RequestBody MoveFolderRequest moveFolderRequest, @PathVariable String folderId){
+    //폴더 이동
+    @PutMapping("/move")
+    public ResponseEntity moveFolder(@RequestBody MoveFolderRequest moveFolderRequest){
         log.info("move folder name:"+moveFolderRequest);
+        String position = moveFolderRequest.getPosition();
+        log.info("position:"+position);
+        if(moveFolderRequest.getPosition().equals("inside")){
+            if(moveFolderRequest.getFileId() != null){
+                log.info("fileId:"+moveFolderRequest.getFileId());
+                Boolean result = folderService.moveFileToFolder(moveFolderRequest);
+                if(result){
+                    return ResponseEntity.ok().body("File moved successfully");
+                }else{
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("File move failed");
+                }
+            }
+            log.info("inside 요청 들어오나???");
+            folderService.moveToFolder(moveFolderRequest);
 
-        double changedOrder =  folderService.updateFolder(moveFolderRequest);
 
-        if(moveFolderRequest.getOrder()== changedOrder){
             return ResponseEntity.ok().body("Folder updated successfully");
-        }else{
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Folder update failed");
-        }
 
+        }else{
+            double changedOrder =  folderService.updateFolder(moveFolderRequest);
+            log.info("changedOrder :: "+changedOrder);
+            if(moveFolderRequest.getOrder()== changedOrder){
+                return ResponseEntity.ok().body("Folder updated successfully");
+            }else{
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Folder update failed");
+            }
+        }
 
     }
 
@@ -273,15 +365,23 @@ public class DriveController {
 
         //읽기 권한시 업로드 불가능
         if(!parentFolder.getOwnerId().equals(uid)){
-           Optional<String>  opt = parentFolder.getSharedUsers()
-                   .stream()
-                   .filter(sharedUser -> sharedUser.getUid().equals(uid)) // uid가 일치하는 사용자 찾기
-                   .map(sharedUser -> sharedUser.getPermission()) // 권한 추출
-                   .findFirst(); // 첫 번째 일치하는 권한 반환
-            if(opt.isPresent() && opt.get().equals("읽기")){
+            List<SharedUser> list = parentFolder.getSharedUsers()
+                    .stream()
+                    .filter(sharedUser -> sharedUser.getUid().equals(uid))
+                    .collect(Collectors.toList());
+
+            // 첫 번째 일치하는 권한 반환
+            if (list.isEmpty()) {
                 return ResponseEntity
                         .status(HttpStatus.BAD_REQUEST)
-                        .body("업로드 권한이 없습니다.");
+                        .body("파일 업로드 권한이 없습니다.");
+            }else{
+                String permission = list.get(0).getPermission();
+                if ("읽기".equals(permission)) {
+                    return ResponseEntity
+                            .status(HttpStatus.BAD_REQUEST)
+                            .body("파일 업로드 권한이 없습니다.");
+                }
             }
 
         }
@@ -323,13 +423,13 @@ public class DriveController {
                             currentParentId = existingFolder.getId(); // 기존 폴더 사용
                             continue;
                         }
-
+                        FolderDto newParentFolder = folderService.getParentFolder(currentParentId);
                         // 새로운 폴더 생성
                         NewDriveRequest newDriveRequest = NewDriveRequest.builder()
                                 .name(folderOrFileName)
                                 .owner(uid)
                                 .parentId(currentParentId)
-                                .parentFolder(parentFolder)
+                                .parentFolder(newParentFolder)
                                 .order(folderOrder)
                                 .build();
                         String newFolderId = folderService.createFolder(newDriveRequest);
@@ -542,9 +642,16 @@ public class DriveController {
 
     //폴더 복구,
     @DeleteMapping("/{type}/restore/{id}")
-    public ResponseEntity restore(@PathVariable String type,@PathVariable String id){
+    public ResponseEntity restore(@PathVariable String type,@PathVariable String id,HttpServletRequest request){
         log.info("복구 로직 시작"+type+"Id "+id);
-        boolean result = folderService.restore( type,id);
+        boolean result = false;
+        String uid = (String)request.getAttribute("uid");
+        if(type.equals("folder")){
+            result=folderService.restoreFolder(id,uid);
+        }else{
+            result = folderService.restore( type,id);
+
+        }
 
         return ResponseEntity.ok().body(result);
     }
@@ -579,6 +686,36 @@ public class DriveController {
         int progress = 50; // 테스트용 진행률
         log.info("Received WebSocket message: {}", message);
         messagingTemplate.convertAndSend("/topic/progress/uploads/" + uid, progress);
+    }
+
+    @PostMapping("/notify")
+    public ResponseEntity sendStorageNotification(@RequestBody StorageNotificationRequest notificationRequest,
+                                                        HttpServletRequest request) {
+
+        log.info("여기 들어와야하는데???");
+        Long userId = (Long) request.getAttribute("id");
+        User user  = userRepository.findById(userId).orElse(null);
+        // 알람 전송 주기 (1시간)
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime oneHourAgo = now.minusHours(1);
+        boolean recentAlertExists = alertRepository.existsByUserIdAndTypeAndCreateAtAfter(userId,2,oneHourAgo.toString());
+
+        if (recentAlertExists) {
+            log.info("알람이 이미 전송됨, 주기 내 추가 알람 전송 생략");
+            return ResponseEntity.ok().body("already recent alert");
+        }
+
+                Alert alert = Alert.builder()
+                .content(notificationRequest.getMessage())
+                .type(2)
+                .title("주의")
+                .status(2)
+                .user(user)
+                .createAt(LocalDateTime.now().toString())
+                .build();
+        Alert savedAlert = alertRepository.save(alert);
+        messagingTemplate.convertAndSendToUser(userId.toString(),"/topic/alerts/", savedAlert.toGetAlarmDto());
+        return ResponseEntity.ok().build();
     }
 
 

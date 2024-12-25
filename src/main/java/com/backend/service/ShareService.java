@@ -4,26 +4,31 @@ package com.backend.service;
 import com.backend.document.drive.FileMogo;
 import com.backend.document.drive.Folder;
 import com.backend.document.drive.Invitation;
+import com.backend.document.drive.ShareLink;
 import com.backend.dto.request.drive.*;
+import com.backend.entity.folder.DriveSetting;
 import com.backend.entity.group.GroupMapper;
+import com.backend.entity.user.Alert;
 import com.backend.entity.user.User;
 import com.backend.repository.GroupMapperRepository;
 import com.backend.repository.UserRepository;
-import com.backend.repository.drive.FileMogoRepository;
-import com.backend.repository.drive.FolderMogoRepository;
-import com.backend.repository.drive.InvitationRepository;
+import com.backend.repository.drive.*;
+import com.backend.repository.user.AlertRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.apache.poi.hpsf.GUID;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -40,6 +45,12 @@ public class ShareService {
     private final UserRepository userRepository;
     private final InvitationRepository invitationRepository;
     private final EmailService emailService;
+    private final ShareLinkRepository shareLinkRepository;
+    private final FolderService folderService;
+    private final AlertRepository alertRepository;
+    private final SimpMessagingTemplate messagingTemplate;
+    private final DriveSettingRepository driveSettingRepository;
+
 
     //department
     public boolean shareUser(ShareRequestDto shareRequestDto,String type,String id ) {
@@ -66,16 +77,17 @@ public class ShareService {
                     savedUser.add(sharedUser1);
                 }
 
-
-
-
                 List<SharedUser> existingSharedUsers = folder.getSharedUsers();
-                Set<SharedUser> uniqueSharedUsers = new HashSet<>(existingSharedUsers);
-                uniqueSharedUsers.addAll(savedUser); // 새로운 사용자 추가
-                List<SharedUser> finalSharedUsers = new ArrayList<>(uniqueSharedUsers);
 
-                folder.setSharedUsers(finalSharedUsers);
+                folder.setSharedUsers(savedUser);;
+
                 folderMogoRepository.save(folder);
+                messageToSharedUser(savedUser,id);
+
+                List<SharedUser> missingUsers = new ArrayList<>(existingSharedUsers);
+                missingUsers.removeAll(savedUser);
+                messageToRemove(missingUsers,id);
+
 
                 return true;
             }else if(type.equals("file")){
@@ -108,7 +120,7 @@ public class ShareService {
                             .email(user1.getEmail())
                             .authority(user1.getRole().toString())
                             .group(groupName)
-                            .permission(sharedUser.getPermission())
+                            .permission(sharedUser.getPermission() == null ? "읽기" : sharedUser.getPermission())
                             .build();
                     savedUser.add(users);
 
@@ -138,20 +150,29 @@ public class ShareService {
                 Folder folder = folderMogoRepository.findById(id)
                         .orElseThrow(() -> new IllegalArgumentException("Invalid Folder ID or Type"));
 
-                List<SharedUser> existingSharedUsers = folder.getSharedUsers();
-                Set<SharedUser> uniqueSharedUsers = new HashSet<>(existingSharedUsers);
-                uniqueSharedUsers.addAll(savedUser); // 새로운 사용자 추가
-                List<SharedUser> finalSharedUsers = new ArrayList<>(uniqueSharedUsers);
+                Map<Long, SharedUser> userMap = new LinkedHashMap<>();
 
+                for (SharedUser user : folder.getSharedUsers()) {
+                    userMap.put(user.getId(), user);
+                }
+
+                for (SharedUser user : savedUser) {
+                    userMap.put(user.getId(), user);
+                }
+
+                List<SharedUser> finalSharedUsers = new ArrayList<>(userMap.values());
+                folder.setSharedUsers(savedUser);
 
 
                 Query query = new Query(Criteria.where("_id").is(id));
                 Update update = new Update()
-                        .set("sharedUsers", finalSharedUsers) // 병합된 사용자 리스트 설정
+                        .set("sharedUsers", savedUser) // 병합된 사용자 리스트 설정
                         .set("invitations", saveInvitations);
                 mongoTemplate.upsert(query, update, Folder.class);
 
-                propagatePermissions(folder.getPath(),finalSharedUsers,folder.getSharedDepts(),saveInvitations,1);
+                propagatePermissions(folder.getPath(),savedUser,folder.getSharedDepts(),saveInvitations,1);
+
+                messageToSharedUser(savedUser,id);
 
                 emailService.sendToInvitation(saveInvitations,folder);
 
@@ -194,7 +215,7 @@ public class ShareService {
                                 .id(user.getId())
                                 .authority(user.getRole() != null ? user.getRole().toString() : "default") // 기본 권한 값 설정                            .
                                 .uid(user.getUid())
-                                .permission(permission)
+                                .permission(permission )
                                 .name(user.getName())
                                 .email(user.getEmail())
                                 .group(group.getDepartmentName())
@@ -212,21 +233,26 @@ public class ShareService {
         if(type.equals("folder")){
             Folder folder = folderMogoRepository.findById(id)
                     .orElseThrow(() -> new IllegalArgumentException("Invalid Folder ID or Type"));
+            List<SharedUser> combinedUsers = new ArrayList<>();
+            combinedUsers.addAll(folder.getSharedUsers());
+            combinedUsers.addAll(sharedUserList);
 
-            List<SharedUser> existingSharedUsers = folder.getSharedUsers();
-            Set<SharedUser> uniqueSharedUsers = new HashSet<>(existingSharedUsers);
-            uniqueSharedUsers.addAll(sharedUserList); // 새로운 사용자 추가
-            List<SharedUser> finalSharedUsers = new ArrayList<>(uniqueSharedUsers);
+            List<SharedUser> finalSharedUsers  = combinedUsers.stream()
+                    .distinct()
+                    .collect(Collectors.toList());
+
+            folder.setSharedUsers(finalSharedUsers );
 
 
             Query query = new Query(Criteria.where("_id").is(id));
             Update update = new Update()
                     .set("sharedDepts", sharedDeptList)
-                    .set("sharedUsers", finalSharedUsers) // 병합된 사용자 리스트 설정
-                    .set("target", "target");
+                    .set("sharedUsers", finalSharedUsers); // 병합된 사용자 리스트 설정
             mongoTemplate.upsert(query, update, Folder.class);
 
             propagatePermissions(folder.getPath(),finalSharedUsers,sharedDeptList,folder.getInvitations(),1);
+
+            messageToSharedUser(sharedUserList,id);
 
             return true;
         }else if(type.equals("file")){
@@ -235,8 +261,6 @@ public class ShareService {
         }
 
         return false;
-
-
 
 
 
@@ -259,8 +283,6 @@ public class ShareService {
                 for(GroupMapper gm : groupMappers){
                     usersToRemove.add(gm.getUser());
                 }
-
-
                 sharedDepts.removeIf(sharedDept -> sharedDept.getDeptId().equals(deptId));
                 folder.setSharedDepts(sharedDepts);
 
@@ -279,6 +301,7 @@ public class ShareService {
 
             folderMogoRepository.save(folder);
             propagatePermissions(folder.getPath(),sharedUsers,sharedDepts,folder.getInvitations(),1);
+            messageToSharedUser(sharedUsers,request.getId());
 
             log.info("Departments and related users removed successfully.");
 
@@ -401,5 +424,184 @@ public class ShareService {
     private boolean checkIfAlreadyShared(String sharedId, String uid) {
         // 공유된 사용자 목록 조회 및 검증
         return  folderMogoRepository.findByIdAndSharedUsersUid(sharedId, uid).isPresent();
+    }
+
+
+    public ShareLink generateToken(String sharedId, String uid) {
+        String token = UUID.randomUUID().toString(); // 고유 토큰 생성
+
+
+        ShareLink shareLink = ShareLink.builder()
+                .shared_By(uid)
+                .token(token)
+                .createAt(LocalDateTime.now())
+                .expiry_date(LocalDateTime.now().plusDays(7))
+                .sharedId(sharedId)
+                .permission("읽기")
+                .is_active(true)
+                .build();
+
+        ShareLink savedLink = shareLinkRepository.save(shareLink); // 7일 유효
+
+        boolean result = updateSharedLink(savedLink,sharedId);
+        if (result){
+            return savedLink;
+        }else{
+            return null;
+        }
+
+    }
+    public boolean updateSharedLink(ShareLink shareLink,String id){
+        Folder rootFolder = folderMogoRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Folder not found: " + id));
+
+
+        Query query = new Query(Criteria.where("_id").is(id));
+        Update update = new Update()
+                .set("isShared", 1)
+                .set("sharedToken", shareLink.getToken())
+                .set("updatedAt", new Date());
+        mongoTemplate.upsert(query, update, Folder.class);
+        rootFolder.updateShareToken(shareLink.getToken());
+
+        // 링크 업데이트 시작
+        boolean result = updateFolderAndChildren(rootFolder);
+
+        if(result){
+            return true;
+        }else{
+            return false;
+        }
+    }
+
+    private boolean updateFolderAndChildren(Folder folder) {
+        String sharedtoken = folder.getSharedToken();
+
+        // 현재 폴더의 파일 처리
+        List<FileMogo> files =  fileMogoRepository.findAllByFolderId(folder.getId());
+        int size = files.size();
+        int count =0;
+        for (FileMogo file : files) {
+            Query query = new Query(Criteria.where("_id").is(file.getId()));
+            Update update = new Update()
+                    .set("isShared", 1)
+                    .set("sharedToken", sharedtoken)
+                    .set("updatedAt", new Date());
+            mongoTemplate.upsert(query, update, FileMogo.class);
+            count ++;
+        }
+
+        // 하위 폴더 재귀적으로 처리
+        List<Folder> children = folderMogoRepository.findAllByParentId(folder.getId());
+        size += children.size();
+        for (Folder child : children) {
+            Query query = new Query(Criteria.where("_id").is(child.getId()));
+            Update update = new Update()
+                    .set("isShared", 1)
+                    .set("sharedToken", sharedtoken)
+                    .set("updatedAt", new Date());
+            mongoTemplate.upsert(query, update, Folder.class);
+            updateFolderAndChildren(child);
+            count ++;
+
+        }
+        if(count == size){
+            return true;
+        }else{
+            return false;
+        }
+    }
+
+    public boolean validateToken(String token){
+
+        log.info("여기 들어와 "+token);
+        Optional<ShareLink> opt= shareLinkRepository.findByToken(token);
+
+        if(opt.isPresent()){
+
+
+            ShareLink shareLink = opt.get();
+            log.info("여기 들어와 shareLink  "+shareLink);
+            boolean isExpired = shareLink.isExpired();
+            log.info("isExpired  "+isExpired);
+
+            if(isExpired){
+                return false;
+            }else{
+                return true;
+            }
+
+        }
+        return false;
+    }
+
+    public void messageToSharedUser(List<SharedUser> sharedUserList,String id){
+        for(SharedUser sharedUser : sharedUserList){
+            User user = User.builder()
+                    .id(sharedUser.getId())
+                    .uid(sharedUser.getUid())
+                    .build();
+            Optional<DriveSetting> setting = driveSettingRepository.findByUserId(sharedUser.getId());
+            if(setting.isPresent() && !setting.get().isShare_notifications()){
+                messagingTemplate.convertAndSend(
+                        "/topic/folder/updates/"+user.getId(),
+                        id
+                );
+            }else{
+                Alert alert = Alert.builder()
+                        .user(user)
+                        .title("공유")
+                        .type(2)
+                        .status(2)
+                        .createAt(LocalDateTime.now().toString())
+                        .content("드라이브가 공유되었습니다.")
+                        .build();
+
+                Alert savedAlert = alertRepository.save(alert);
+                log.info("공유 메세지 전달!!"+sharedUser.getUid() +"대상 "+id);
+                messagingTemplate.convertAndSend(
+                        "/topic/folder/updates/"+user.getId(),
+                        id
+                );
+                messagingTemplate.convertAndSendToUser(sharedUser.getId().toString(),"/topic/alerts/", savedAlert.toGetAlarmDto());
+
+            }
+
+        }
+    }
+
+    public void messageToRemove(List<SharedUser> sharedUserList,String id){
+        for(SharedUser sharedUser : sharedUserList){
+            User user = User.builder()
+                    .id(sharedUser.getId())
+                    .uid(sharedUser.getUid())
+                    .build();
+            Optional<DriveSetting> setting = driveSettingRepository.findByUserId(sharedUser.getId());
+            if(setting.isPresent() && !setting.get().isShare_notifications()){
+                messagingTemplate.convertAndSend(
+                        "/topic/folder/remove/"+sharedUser.getId(),
+                        id
+                );
+            }else{
+                Alert alert = Alert.builder()
+                        .user(user)
+                        .title("공유 해제")
+                        .type(2)
+                        .status(2)
+                        .createAt(LocalDateTime.now().toString())
+                        .content("드라이브가 공유 해제되었습니다.")
+                        .build();
+
+                Alert savedAlert = alertRepository.save(alert);
+                log.info("공유 메세지 전달!!"+sharedUser.getUid() +"대상 "+id);
+                messagingTemplate.convertAndSend(
+                        "/topic/folder/remove/"+sharedUser.getId(),
+                        id
+                );
+                messagingTemplate.convertAndSendToUser(sharedUser.getId().toString(),"/topic/alerts/", savedAlert.toGetAlarmDto());
+
+            }
+
+        }
     }
 }

@@ -8,10 +8,12 @@ import com.backend.service.ProjectService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -30,7 +32,7 @@ public class ProjectController {
     public ResponseEntity<?> createProject(@RequestBody PostProjectDTO dto, HttpServletRequest request) {
         String ownerUid = (String) request.getAttribute("uid");
         Project savedProject = projectService.createProject(dto, ownerUid);
-        return ResponseEntity.ok().body(savedProject.toGetProjectDTO());
+        return ResponseEntity.ok().body(savedProject.getId());
     }
 
     @GetMapping("/projects") // 프로젝트 목록 출력
@@ -45,6 +47,13 @@ public class ProjectController {
         GetProjectDTO dto = projectService.getProject(projectId);
         return ResponseEntity.ok().body(dto);
     }
+    @PutMapping("/project/{projectId}") // 프로젝트 페이지 출력
+    public ResponseEntity<?> putProject(@PathVariable Long projectId, @RequestBody GetProjectDTO dto) {
+        dto.setId(projectId);
+        GetProjectDTO updatedProject = projectService.putProject(dto);
+        return ResponseEntity.ok().body(updatedProject);
+    }
+
     @GetMapping("/project/{projectId}/column") // 프로젝트 페이지 출력
     public ResponseEntity<?> getColumn(@PathVariable Long projectId) {
         List<GetProjectColumnDTO> columnList = projectService.getColumns(projectId);
@@ -107,7 +116,7 @@ public class ProjectController {
         if(type.equals("added")){               // 서브태스크 생성
             saved = projectService.insertSubTask(dto);
         } else if (type.equals("updated")) {    //서브태스크 수정
-            projectService.clickSubTask(dto.getId());
+            saved = projectService.clickSubTask(dto.getId());
         } else{                                 // 서브태스크 삭제
             projectService.delete("subtask", dto.getId());
         }
@@ -131,5 +140,14 @@ public class ProjectController {
         projectService.sendBoardUpdate(projectId, "COMMENT_" + type.toUpperCase(), saved);
     }
 
+    @GetMapping("/homeProject")
+    public ResponseEntity<?> homeProject (Authentication auth){
+        Long userId = Long.valueOf(auth.getName());
+        List<ReqHomeProjectDTO> dtos = projectService.getHomeProject(userId);
+        if(dtos.isEmpty()){
+            return ResponseEntity.ok().body("데이터가 없습니다...");
+        }
+        return ResponseEntity.ok().body(dtos);
+    }
 
 }

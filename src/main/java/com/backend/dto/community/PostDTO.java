@@ -58,6 +58,9 @@ public class PostDTO {
 
     private LocalDateTime createdAt;
 
+
+    private int comment;
+
     public void setBoardName(String boardName) {
     }
 }

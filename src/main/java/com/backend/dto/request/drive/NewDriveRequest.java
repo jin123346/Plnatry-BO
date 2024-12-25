@@ -33,4 +33,5 @@ public class NewDriveRequest {
     private List<SharedUser> sharedUsers = new ArrayList<>();
 
     private FolderDto parentFolder;
+    private long ownerId;
 }

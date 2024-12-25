@@ -319,6 +319,7 @@ public class GroupService {
     public Page<GetGroupsAllDto> getGroupsAll(int page,String company) {
         Pageable pageable = PageRequest.of(page,5);
         if(company.equals("personalUser")){
+
             return null;
         }
         Page<Group> groups = groupRepository.findAllByCompanyAndStatusIsNot(company,0,pageable);
