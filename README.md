@@ -30,6 +30,14 @@
 
 <br>
 
+## 🙍‍♀️ 내가 담당한 기능
+### 드라이브  기능
+- 드라이브 생성 및 삭제
+- 드라이브 안의 파일 업로드, 폴더 업로드,
+- 공유기능(읽기권한, 수정권한, 모든권한 부여)
+- 링크공유기능
+- 회사 부서 전체 공유 설정정
+
 ## 🖋 Tools
 <div align="center">
 <img src="https://img.shields.io/badge/React-61DAFB?style=for-the-badge&logo=React&logoColor=white"> <img src="https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=Vite&logoColor=white">
@@ -53,9 +61,11 @@
 
 <br>
 
-## ⚙ Features
+## ⚙ Youtube
 <div align="center">
-
+[Plantry 전체 시연영상](https://youtu.be/-gQXQKLFU8E?si=AgVWPkwBuSaXA5Fc/)
+  <br>
+[Plantry 드라이브 시연영상](https://youtu.be/1e6QSD1kN9M?si=h8wslrbNeXUe58GX/)
   
 </div>
 
