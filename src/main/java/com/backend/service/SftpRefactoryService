@@ -1,0 +1,255 @@
+package com.backend.service;
+
+import com.backend.dto.response.drive.NewNameResponseDto;
+import com.jcraft.jsch.*;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import java.io.*;
+import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+@Log4j2
+@Service
+@RequiredArgsConstructor
+public class SftpRefactoryService {
+
+    @Value("${file-server.url}")
+    private String SFTP_HOST;
+    private static final int SFTP_PORT = 22;
+    private static final String SFTP_USER = "sftpuser";
+    private static final String SFTP_PASSWORD = "Lotte4!@12";
+    private static final String BASE_SFTP_DIR = "uploads/";
+
+    /**
+     * SFTP 연결 생성
+     */
+    private Session connectSFTP() {
+        try {
+            JSch jsch = new JSch();
+            Session session = jsch.getSession(SFTP_USER, SFTP_HOST, SFTP_PORT);
+            session.setPassword(SFTP_PASSWORD);
+            session.setConfig("StrictHostKeyChecking", "no");
+            session.connect();
+            return session;
+        } catch (JSchException e) {
+            throw new RuntimeException("SFTP 연결 실패", e);
+        }
+    }
+
+    /**
+     * SFTP 실행을 위한 공통 메서드
+     */
+    private <T> T executeSFTP(Function<ChannelSftp, T> function) {
+        Session session = null;
+        ChannelSftp channelSftp = null;
+        try {
+            session = connectSFTP();
+            channelSftp = (ChannelSftp) session.openChannel("sftp");
+            channelSftp.connect();
+            return function.apply(channelSftp);
+        } catch (Exception e) {
+            log.error("SFTP 작업 실패: {}", e.getMessage());
+            throw new RuntimeException(e);
+        } finally {
+            if (channelSftp != null) {
+                channelSftp.disconnect();
+            }
+            if (session != null) {
+                session.disconnect();
+            }
+        }
+    }
+
+    /**
+     * channelExec 코드 사용을 위한 공동메서드
+     **/
+     private boolean executeCommand(String command, String successMessage, String errorMessage) {
+    Session session = null;
+    ChannelExec channelExec = null;
+    try {
+        session = connectSFTP();
+        channelExec = (ChannelExec) session.openChannel("exec");
+        channelExec.setCommand(command);
+        channelExec.connect();
+
+        log.info(successMessage);
+        return true;
+    } catch (JSchException e) {
+        log.error("{}: {}", errorMessage, e.getMessage());
+        return false;
+    } finally {
+        if (channelExec != null) {
+            channelExec.disconnect();
+        }
+        if (session != null) {
+            session.disconnect();
+        }
+    }
+}
+
+
+
+    /**
+     * 사용자 폴더 생성
+     */
+    public boolean createUserFolder(String username) {
+        return executeSFTP(channelSftp -> {
+            String remoteDir = BASE_SFTP_DIR + username;
+            try {
+                channelSftp.mkdir(remoteDir);
+                log.info("폴더 생성 완료: {}", remoteDir);
+                return true;
+            } catch (SftpException e) {
+                log.error("폴더 생성 실패: {}", e.getMessage());
+                return false;
+            }
+        });
+    }
+
+    /**
+     * 사용자 폴더 삭제
+     */
+    public boolean deleteUserFolder(String username) {
+        return executeSFTP(channelSftp -> {
+            String remoteDir = BASE_SFTP_DIR + username;
+            try {
+                channelSftp.rmdir(remoteDir);
+                log.info("폴더 삭제 완료: {}", remoteDir);
+                return true;
+            } catch (SftpException e) {
+                log.error("폴더 삭제 실패: {}", e.getMessage());
+                return false;
+            }
+        });
+    }
+
+    
+
+    /**
+     * 새 폴더 생성
+     */
+    public NewNameResponseDto createFolder(String folderName, String username) {
+        return executeSFTP(channelSftp -> {
+            String folderUUID = UUID.randomUUID().toString();
+            String remoteDir = BASE_SFTP_DIR + username + "/" + folderUUID;
+
+            try {
+                channelSftp.mkdir(remoteDir);
+                log.info("폴더 생성 완료: {}", remoteDir);
+                return new NewNameResponseDto(folderUUID, folderName, remoteDir);
+            } catch (SftpException e) {
+                log.error("폴더 생성 실패: {}", e.getMessage());
+                return null;
+            }
+        });
+    }
+
+    /**
+     * 파일 업로드
+     */
+    public boolean uploadFile(String localFilePath, String remoteDir, String remoteFileName) {
+        return executeSFTP(channelSftp -> {
+            try {
+                channelSftp.put(localFilePath, remoteDir + "/" + remoteFileName);
+                log.info("파일 업로드 완료: {}/{}", remoteDir, remoteFileName);
+                return true;
+            } catch (SftpException e) {
+                log.error("파일 업로드 실패: {}", e.getMessage());
+                return false;
+            }
+        });
+    }
+
+    /**
+     * 파일 다운로드
+     */
+    public boolean downloadFile(String remoteDir, String remoteFileName, String localFilePath) {
+        return executeSFTP(channelSftp -> {
+            try {
+                channelSftp.get(remoteDir + "/" + remoteFileName, localFilePath);
+                log.info("파일 다운로드 완료: {} -> {}", remoteDir, localFilePath);
+                return true;
+            } catch (SftpException e) {
+                log.error("파일 다운로드 실패: {}", e.getMessage());
+                return false;
+            }
+        });
+    }
+
+    /**
+     * 폴더 이름 변경
+     */
+    public boolean renameFolder(String currentPath, String newPath) {
+        return executeSFTP(channelSftp -> {
+            try {
+                channelSftp.rename(currentPath, newPath);
+                log.info("폴더 이름 변경 완료: {} -> {}", currentPath, newPath);
+                return true;
+            } catch (SftpException e) {
+                log.error("폴더 이름 변경 실패: {}", e.getMessage());
+                return false;
+            }
+        });
+    }
+
+    /**
+     * 폴더 삭제
+     */
+    public boolean delete(String path) {
+        return executeSFTP(channelSftp -> {
+            try {
+                channelSftp.rmdir(path);
+                log.info("폴더 삭제 완료: {}", path);
+                return true;
+            } catch (SftpException e) {
+                log.error("폴더 삭제 실패: {}", e.getMessage());
+                return false;
+            }
+        });
+    }
+
+   /**
+     * 모든 하위폴더 삭제
+     */
+    public boolean deleteAll(String path) {
+    return executeCommand("rm -rf " + path, "폴더와 하위 파일 삭제 완료", "폴더 삭제 실패");
+
+
+    /**
+     * 폴더 내 모든 파일 복사
+     */
+    public boolean copyFolderContents(String sourcePath, String targetPath) {
+        return executeSFTP(channelSftp -> {
+            try {
+                String command = String.format("cp -r %s/* %s", sourcePath, targetPath);
+                executeCommand(command);
+                log.info("폴더 복사 완료: {} -> {}", sourcePath, targetPath);
+                return true;
+            } catch (Exception e) {
+                log.error("폴더 복사 실패: {}", e.getMessage());
+                return false;
+            }
+        });
+    }
+
+    /**
+     * 원격 명령 실행 (cp, rm 등)
+     */
+    private void executeCommand(String command) {
+        executeSFTP(channelSftp -> {
+            try {
+                ChannelExec execChannel = (ChannelExec) channelSftp.getSession().openChannel("exec");
+                execChannel.setCommand(command);
+                execChannel.connect();
+                execChannel.disconnect();
+                return null;
+            } catch (JSchException e) {
+                throw new RuntimeException("명령 실행 실패: " + e.getMessage(), e);
+            }
+        });
+    }
+}
